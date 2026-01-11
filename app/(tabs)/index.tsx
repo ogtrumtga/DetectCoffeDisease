@@ -1,98 +1,125 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+// MyNewProject/app/(tabs)/index.tsx
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const navigateToCamera = () => {
+    router.push('/camera/camera-screen');
+  };
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  return (
+    <View style={styles.container}>
+      <Text style={styles.appName}>App name</Text>
+
+      <View style={styles.card}>
+        <View style={styles.workflow}>
+          <View style={styles.step}>
+            <TouchableOpacity 
+              style={styles.dashedBox} 
+              onPress={navigateToCamera}
+            >
+              <Ionicons name="scan-outline" size={30} color="#E9C46A" />
+            </TouchableOpacity>
+            <Text style={styles.stepText}>Chụp ảnh</Text>
+          </View>
+
+          <Ionicons name="arrow-forward" size={20} color="#333" />
+
+          <View style={styles.step}>
+            <View style={[styles.iconCircle, { backgroundColor: '#E9C46A' }]}>
+              <Ionicons name="document-text" size={24} color="white" />
+              <View style={styles.checkBadge}>
+                <Ionicons name="checkmark-circle" size={14} color="#2A9D8F" />
+              </View>
+            </View>
+            <Text style={styles.stepText}>Chuẩn đoán</Text>
+          </View>
+
+          <Ionicons name="arrow-forward" size={20} color="#333" />
+
+          <View style={styles.step}>
+            <Ionicons name="medical" size={40} color="#2A9D8F" />
+            <Text style={styles.stepText}>Thuốc</Text>
+          </View>
+        </View>
+
+        <TouchableOpacity style={styles.mainButton} onPress={navigateToCamera}>
+          <Text style={styles.buttonText}>CHỤP ẢNH</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
+  container: { 
+    flex: 1, 
+    backgroundColor: '#F8F9FA', 
+    paddingTop: 60, 
+    alignItems: 'center' 
+  },
+  appName: { 
+    fontSize: 22, 
+    fontWeight: 'bold', 
+    color: '#B7E4C7', 
+    marginBottom: 40 
+  },
+  card: { 
+    width: '90%', 
+    backgroundColor: '#F1F8F5', 
+    borderRadius: 20, 
+    padding: 30, 
+    alignItems: 'center' 
+  },
+  workflow: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between', 
+    width: '100%', 
+    marginBottom: 40 
+  },
+  step: { 
+    alignItems: 'center' 
+  },
+  dashedBox: { 
+    width: 50, 
+    height: 50, 
+    borderStyle: 'dashed', 
+    borderWidth: 2, 
+    borderColor: '#E9C46A', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  iconCircle: { 
+    width: 50, 
+    height: 50, 
+    borderRadius: 25, 
+    justifyContent: 'center', 
     alignItems: 'center',
-    gap: 8,
+    position: 'relative'
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  checkBadge: { 
+    position: 'absolute', 
+    bottom: -2, 
+    right: -2, 
+    backgroundColor: 'white', 
+    borderRadius: 10 
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  stepText: { 
+    fontSize: 12, 
+    marginTop: 8, 
+    fontWeight: '600' 
   },
+  mainButton: { 
+    backgroundColor: '#B7E4C7', 
+    paddingVertical: 15, 
+    paddingHorizontal: 40, 
+    borderRadius: 30 
+  },
+  buttonText: { 
+    color: 'white', 
+    fontSize: 18, 
+    fontWeight: 'bold' 
+  }
 });
