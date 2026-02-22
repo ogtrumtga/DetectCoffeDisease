@@ -1,35 +1,105 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
-
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Ionicons } from "@expo/vector-icons";
+import { Tabs } from "expo-router";
+import { useAuth } from "../../context/AuthContext";
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const { isLoggedIn } = useAuth();
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
-        tabBarButton: HapticTab,
-      }}>
+        tabBarActiveTintColor: "#2D3142",
+        tabBarInactiveTintColor: "#555",
+        tabBarStyle: {
+          backgroundColor: "#ABE0AC",
+          height: 70,
+          paddingHorizontal: 12,
+          borderTopWidth: 0,
+        },
+        tabBarItemStyle: {
+          height: 48,
+          borderRadius: 14,
+          marginVertical: 6,
+        },
+        tabBarIconStyle: { marginTop: 2 },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: "600",
+          marginBottom: 4,
+        },
+        tabBarActiveBackgroundColor: "#FFFFFF",
+      }}
+    >
+      {/* 1. CAMERA: Luôn luôn hiện */}
       <Tabs.Screen
-        name="index"
+        name="camera"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: "Camera",
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="camera-outline" size={24} color={color} />
+          ),
         }}
       />
+
+      {/* 2. CỘNG ĐỒNG: Chỉ hiện khi isLoggedIn = true */}
       <Tabs.Screen
-        name="explore"
+        name="community"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: "Cộng đồng",
+          // Ép kiểu 'as any' để bypass kiểm tra gắt gao của TS nếu cần
+          // Hoặc viết đúng path Expo Router mong đợi
+          href: isLoggedIn ? "/community" : (null as any),
+          tabBarIcon: ({ color }) => (
+            <Ionicons
+              name="chatbubble-ellipses-outline"
+              size={24}
+              color={color}
+            />
+          ),
         }}
       />
+
+      {/* 3. THỜI TIẾT: Chỉ hiện khi isLoggedIn = true */}
+      <Tabs.Screen
+        name="Weather"
+        options={{
+          href: null, // Thuộc tính này sẽ xóa tab khỏi thanh dưới dù đã login hay chưa
+        }}
+      />
+
+      {/* 4. TÔI: Luôn luôn hiện */}
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: "Tôi",
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="person-outline" size={24} color={color} />
+          ),
+        }}
+      />
+
+      {/* Các screen phụ hoặc modal - Luôn ẩn khỏi TabBar */}
+      <Tabs.Screen name="weather/explain-spray-rule" options={{ href: null }} />
+      <Tabs.Screen name="community/create-post" options={{ href: null }} />
+      <Tabs.Screen
+        name="community/notification-modal"
+        options={{ href: null }}
+      />
+      <Tabs.Screen name="community/post-detail" options={{ href: null }} />
+      <Tabs.Screen name="Weather/weather" options={{ href: null }} />
+      <Tabs.Screen name="Weather/spray-time-modal" options={{ href: null }} />
+      {/* <Tabs.Screen name="camera/camera-screen" options={{ href: null }} />
+
+      <Tabs.Screen name="camera/confirm-screen" options={{ href: null }} />
+
+      <Tabs.Screen name="camera/result-screen" options={{ href: null }} />
+
+      <Tabs.Screen name="camera/detail-screen" options={{ href: null }} />
+
+      <Tabs.Screen name="profile/detail" options={{ href: null }} /> */}
+
+      {/* <Tabs.Screen name="profile/home" options={{ href: null }} /> */}
     </Tabs>
   );
 }
