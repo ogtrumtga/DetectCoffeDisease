@@ -39,7 +39,7 @@ export default function ResultScreen() {
 
         if (isDataError) {
           router.push({
-            pathname: "../error",
+            pathname: "/error",
             params: {
               title: "Không có dữ liệu",
               message:
@@ -51,7 +51,7 @@ export default function ResultScreen() {
         }
       } catch (error) {
         router.push({
-          pathname: "../error",
+          pathname: "/error",
           params: {
             title: "Lỗi hệ thống",
             message: "Đã xảy ra lỗi khi tải kết quả chẩn đoán.",
@@ -64,11 +64,11 @@ export default function ResultScreen() {
   }, []);
 
   const handleViewMedicine = () => {
-    router.push("../camera/detail-screen");
+    router.push("/(tabs)/camera/detailCameraScreen");
   };
 
   const handleRediagnose = () => {
-    router.push("../camera/camera-screen");
+    router.push("/(tabs)/camera/cameraScreen");
   };
 
   if (isLoading) {
@@ -95,7 +95,7 @@ export default function ResultScreen() {
             onPress={() => router.back()}
             style={styles.backButton}
           >
-            <Ionicons name="arrow-back" size={24} color="white" />
+            {/* <Ionicons name="arrow-back" size={24} color="white" /> */}
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Kết quả chẩn đoán</Text>
           <View style={{ width: 40 }} />

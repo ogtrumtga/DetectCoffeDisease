@@ -27,7 +27,6 @@ export default function ConfirmScreen() {
     } else {
       startAnalysis();
     }
-
   }, [countdown]);
 
   const startAnalysis = () => {
@@ -46,7 +45,7 @@ export default function ConfirmScreen() {
 
         // GỌI TRANG BÁO LỖI
         router.push({
-          pathname: "../error",
+          pathname: "/error",
           params: {
             title: "Phân tích thất bại",
             message:
@@ -55,7 +54,7 @@ export default function ConfirmScreen() {
         });
       } else {
         // Thành công chuyển đến trang kết quả
-        router.push("../camera/result-screen");
+        router.push("/(tabs)/camera/resultScreen");
       }
     }, 2500);
   };

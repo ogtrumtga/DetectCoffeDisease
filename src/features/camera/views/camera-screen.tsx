@@ -46,7 +46,7 @@ export default function CameraScreen() {
       } catch (err) {
         // Gọi Error Screen khi lỗi chụp ảnh
         router.push({
-          pathname: "../error",
+          pathname: "/error",
           params: {
             title: "Lỗi Camera",
             message: "Không thể thực hiện chụp ảnh. Vui lòng thử lại.",
@@ -64,7 +64,7 @@ export default function CameraScreen() {
       if (!permissionResult.granted) {
         // Gọi Error Screen khi không cấp quyền thư viện
         router.push({
-          pathname: "../error",
+          pathname: "/error",
           params: {
             title: "Cần quyền truy cập",
             message: "Bạn cần cấp quyền truy cập thư viện ảnh để tiếp tục.",
@@ -84,10 +84,10 @@ export default function CameraScreen() {
         setPhoto(result.assets[0].uri);
         setIsPreview(true);
       }
-    } catch (error) {
+    } catch (err) {
       // Gọi Error Screen khi lỗi chọn ảnh
       router.push({
-        pathname: "../error",
+        pathname: "/error",
         params: {
           title: "Lỗi",
           message: "Không thể chọn ảnh từ thư viện vào lúc này.",
@@ -104,7 +104,7 @@ export default function CameraScreen() {
   const confirmPicture = () => {
     if (photo) {
       router.push({
-        pathname: "../camera/confirm-screen",
+        pathname: "/(tabs)/camera/confirmScreen",
         params: { imageUri: photo },
       });
     }

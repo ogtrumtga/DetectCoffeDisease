@@ -1,10 +1,9 @@
 import { Stack } from "expo-router";
-// 1. Import cái Provider mà log báo thiếu
 import { NotificationProvider } from "../../../src/features/community/contexts/NotificationContext";
 
 export default function CommunityLayout() {
   return (
-    // 2. Bao bọc toàn bộ Stack bằng Provider này
+    
     <NotificationProvider>
       <Stack>
         <Stack.Screen

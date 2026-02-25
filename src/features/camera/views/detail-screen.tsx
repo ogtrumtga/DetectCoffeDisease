@@ -1,6 +1,5 @@
-// src/features/camera/views/detail-screen.tsx
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
@@ -10,34 +9,47 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Alert
 } from "react-native";
+// Import store giả từ trang profile (Trong thực tế nên dùng Context)
+import { globalHistoryData } from "../../profile/views/profileLoggedIn";
 
 export default function DetailScreen() {
   const [isSaving, setIsSaving] = useState(false);
+  const router = useRouter();
 
-  // Hàm lưu lịch sử có tích hợp Error Screen
   const handleSaveHistory = async () => {
     setIsSaving(true);
 
-    // Mô phỏng quá trình gọi API lưu trữ
     setTimeout(() => {
-      // Giả lập tỷ lệ lỗi khi lưu
-      const isError = Math.random() < 0.2;
+      const isError = Math.random() < 0.1; // Tỷ lệ lỗi 10%
 
       setIsSaving(false);
       if (isError) {
         router.push({
-          pathname: "../error",
+          pathname: "/error",
           params: {
             title: "Lỗi lưu trữ",
-            message:
-              "Không thể kết nối với máy chủ để lưu kết quả. Vui lòng kiểm tra lại kết nối mạng.",
+            message: "Không thể kết nối với máy chủ để lưu kết quả.",
           },
         });
       } else {
-        // Nếu thành công có thể quay lại hoặc báo thành công
-        alert("Đã lưu vào lịch sử thành công!");
-        router.push("../history");
+        // 1. Thêm dữ liệu mới vào "kho"
+        const newRecord = {
+          id: Date.now().toString(), // Tạo ID ngẫu nhiên
+          title: "Bệnh gỉ sắt",
+          date: new Date().toLocaleDateString('vi-VN'),
+        };
+        
+        globalHistoryData.unshift(newRecord); // Thêm vào đầu danh sách
+
+        // 2. Thông báo và chuyển hướng
+        Alert.alert("Thành công", "Đã lưu vào lịch sử chẩn đoán!", [
+          { 
+            text: "OK", 
+            onPress: () => router.push("/(tabs)/profile/loggedInScreen") 
+          }
+        ]);
       }
     }, 1500);
   };
@@ -46,12 +58,14 @@ export default function DetailScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
+          onPress={() => {
+            if (router.canGoBack()) router.back();
+            else router.replace("/(tabs)/camera/cameraIndex");
+          }}
         >
           <Ionicons name="chevron-back" size={28} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>8 tháng 1</Text>
+        <Text style={styles.headerTitle}>Kết quả ngày {new Date().getDate()}/{new Date().getMonth() + 1}</Text>
       </View>
 
       <ScrollView
@@ -117,10 +131,7 @@ export default function DetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
+  container: { flex: 1, backgroundColor: "#FFFFFF" },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -128,27 +139,15 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     backgroundColor: "#F9FCF9",
   },
-  backButton: {
-    padding: 5,
-  },
   headerTitle: {
     fontSize: 18,
     fontWeight: "700",
     color: "#333",
     marginLeft: 10,
   },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-  },
-  sectionContainer: {
-    marginTop: 25,
-  },
-  badgeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 15,
-  },
+  scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
+  sectionContainer: { marginTop: 25 },
+  badgeRow: { flexDirection: "row", alignItems: "center", marginBottom: 15 },
   numberBadge: {
     backgroundColor: "#ABE0AC",
     width: 32,
@@ -158,16 +157,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 12,
   },
-  numberBadgeText: {
-    color: "white",
-    fontWeight: "bold",
-    fontSize: 18,
-  },
-  sectionHeading: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#1A1A1A",
-  },
+  numberBadgeText: { color: "white", fontWeight: "bold", fontSize: 18 },
+  sectionHeading: { fontSize: 18, fontWeight: "700", color: "#1A1A1A" },
   resultCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -176,20 +167,10 @@ const styles = StyleSheet.create({
     padding: 12,
     borderWidth: 1,
     borderColor: "#EEE",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
     elevation: 2,
   },
-  diseaseNameText: {
-    fontSize: 16,
-    fontWeight: "600",
-    flex: 1,
-  },
-  arrowIcon: {
-    marginLeft: "auto",
-  },
+  diseaseNameText: { fontSize: 16, fontWeight: "600", flex: 1 },
+  arrowIcon: { marginLeft: "auto" },
   medicineItem: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -198,16 +179,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F0F0F0",
   },
-  medTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#000",
-  },
-  medSub: {
-    fontSize: 13,
-    color: "#666",
-    marginTop: 4,
-  },
+  medTitle: { fontSize: 16, fontWeight: "bold", color: "#000" },
+  medSub: { fontSize: 13, color: "#666", marginTop: 4 },
   linkText: {
     color: "#0000FF",
     fontSize: 12,
@@ -222,9 +195,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 40,
   },
-  mainActionBtnText: {
-    color: "white",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
+  mainActionBtnText: { color: "white", fontSize: 18, fontWeight: "bold" },
 });

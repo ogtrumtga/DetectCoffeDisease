@@ -26,18 +26,14 @@ export default function ProfileEditScreen() {
   const [showMenu, setShowMenu] = useState(false);
 
   const handleGoBack = () => {
-    router.push("../profile/profileLoggedeIn");
+    router.push("/(tabs)/profile/loggedInScreen");
   };
 
-  // Hàm xử lý lưu thông tin có bắt lỗi
   const handleSaveProfile = async () => {
     setLoading(true);
 
-    // Mô phỏng gọi API cập nhật profile
     setTimeout(() => {
-      // Giả lập tỷ lệ lỗi hệ thống (ví dụ: tên quá ngắn hoặc lỗi server)
       const isError = user.name.length < 2 || Math.random() < 0.15;
-
       setLoading(false);
 
       if (isError) {
@@ -50,15 +46,13 @@ export default function ProfileEditScreen() {
           },
         });
       } else {
-        // Thành công thì quay về trang Profile
         handleGoBack();
       }
     }, 1500);
   };
 
-  // Hàm xử lý đăng xuất
+  // ⭐⭐⭐ SỬA ĐOẠN NÀY
   const handleLogout = () => {
-    // Ví dụ: Lỗi phiên làm việc không thể đăng xuất sạch
     const logoutFailed = Math.random() < 0.05;
 
     if (logoutFailed) {
@@ -70,8 +64,7 @@ export default function ProfileEditScreen() {
         },
       });
     } else {
-      console.log("Logout success");
-      // router.replace("/login");
+      router.replace("/(tabs)/profile/guestScreen");
     }
   };
 
@@ -101,11 +94,11 @@ export default function ProfileEditScreen() {
           <View style={styles.menuBox}>
             <TouchableOpacity
               onPress={() => {
-                setShowMenu(false);
-                console.log("Tài khoản mới");
-              }}
-            >
-              <Text style={styles.menuItem}>tài khoản mới</Text>
+              setShowMenu(false);
+              router.push("/auth/register");
+            }}
+          >
+        <Text style={styles.menuItem}>tài khoản mới</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>

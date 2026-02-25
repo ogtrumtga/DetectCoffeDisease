@@ -1,7 +1,7 @@
 // src/features/profile/views/profileLoggedIn.tsx
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -13,15 +13,23 @@ import {
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Swipeable from "react-native-gesture-handler/Swipeable";
 
+// Giả lập một Global Store đơn giản cho mục đích demo
+// Trong thực tế, bạn nên dùng Context API hoặc Redux
+export let globalHistoryData = [
+  { id: "1", title: "C", date: "8 tháng 1" },
+  { id: "2", title: "không khô quả", date: "Ngày 1 tháng 12 năm 2025" },
+];
+
 export default function ProfileHomeScreen() {
   const [activeTab, setActiveTab] = useState("history");
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [historyData, setHistoryData] = useState(globalHistoryData);
   const router = useRouter();
 
-  const [historyData, setHistoryData] = useState([
-    { id: "1", title: "C", date: "8 tháng 1" },
-    { id: "2", title: "không khô quả", date: "Ngày 1 tháng 12 năm 2025" },
-  ]);
+  // Cập nhật lại dữ liệu mỗi khi màn hình được focus (để thấy dữ liệu mới từ DetailScreen)
+  useEffect(() => {
+    setHistoryData([...globalHistoryData]);
+  }, []);
 
   const activityData = [
     {
@@ -42,14 +50,16 @@ export default function ProfileHomeScreen() {
       setIsDeleting(null);
       if (isError) {
         router.push({
-          pathname: "/error", // Dùng đường dẫn tuyệt đối an toàn hơn
+          pathname: "/error",
           params: {
             title: "Không thể xóa",
             message: "Đã xảy ra lỗi khi kết nối với máy chủ.",
           },
         });
       } else {
-        setHistoryData(historyData.filter((item) => item.id !== id));
+        const newData = historyData.filter((item) => item.id !== id);
+        globalHistoryData = newData; // Cập nhật store giả
+        setHistoryData(newData);
       }
     }, 1000);
   };
@@ -74,7 +84,7 @@ export default function ProfileHomeScreen() {
         style={styles.listItem}
         onPress={() =>
           router.push({
-            pathname: "../camera/detailScreen",
+            pathname: "/(tabs)/camera/detailCameraScreen",
             params: { id: item.id },
           })
         }

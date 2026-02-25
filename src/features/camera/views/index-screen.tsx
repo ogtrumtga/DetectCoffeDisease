@@ -11,7 +11,7 @@ export default function HomeScreen() {
   const [temperature, setTemperature] = useState<number | null>(null);
 
   const navigateToCamera = () => {
-    router.push("../(tabs)/camera/cameraScreen");
+    router.push("/(tabs)/camera/cameraScreen");
   };
 
   const navigateWeather = () => {

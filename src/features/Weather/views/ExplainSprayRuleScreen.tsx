@@ -1,3 +1,4 @@
+//  src/features/Weather/views/ExplainSprayRuleScreen.tsx
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';

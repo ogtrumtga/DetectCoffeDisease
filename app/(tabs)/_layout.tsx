@@ -1,3 +1,4 @@
+// MyNewProject/app/_layout.tsx
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { useAuth } from "../../context/AuthContext";
@@ -31,7 +32,6 @@ export default function TabLayout() {
         tabBarActiveBackgroundColor: "#FFFFFF",
       }}
     >
-      {/* 1. CAMERA: Luôn luôn hiện */}
       <Tabs.Screen
         name="camera"
         options={{
@@ -42,13 +42,10 @@ export default function TabLayout() {
         }}
       />
 
-      {/* 2. CỘNG ĐỒNG: Chỉ hiện khi isLoggedIn = true */}
       <Tabs.Screen
         name="community"
         options={{
           title: "Cộng đồng",
-          // Ép kiểu 'as any' để bypass kiểm tra gắt gao của TS nếu cần
-          // Hoặc viết đúng path Expo Router mong đợi
           href: isLoggedIn ? "/community" : (null as any),
           tabBarIcon: ({ color }) => (
             <Ionicons
@@ -60,15 +57,13 @@ export default function TabLayout() {
         }}
       />
 
-      {/* 3. THỜI TIẾT: Chỉ hiện khi isLoggedIn = true */}
       <Tabs.Screen
         name="Weather"
         options={{
-          href: null, // Thuộc tính này sẽ xóa tab khỏi thanh dưới dù đã login hay chưa
+          href: null,
         }}
       />
 
-      {/* 4. TÔI: Luôn luôn hiện */}
       <Tabs.Screen
         name="profile"
         options={{
@@ -79,7 +74,6 @@ export default function TabLayout() {
         }}
       />
 
-      {/* Các screen phụ hoặc modal - Luôn ẩn khỏi TabBar */}
       <Tabs.Screen name="weather/explain-spray-rule" options={{ href: null }} />
       <Tabs.Screen name="community/create-post" options={{ href: null }} />
       <Tabs.Screen
@@ -90,15 +84,10 @@ export default function TabLayout() {
       <Tabs.Screen name="Weather/weather" options={{ href: null }} />
       <Tabs.Screen name="Weather/spray-time-modal" options={{ href: null }} />
       {/* <Tabs.Screen name="camera/camera-screen" options={{ href: null }} />
-
       <Tabs.Screen name="camera/confirm-screen" options={{ href: null }} />
-
       <Tabs.Screen name="camera/result-screen" options={{ href: null }} />
-
       <Tabs.Screen name="camera/detail-screen" options={{ href: null }} />
-
       <Tabs.Screen name="profile/detail" options={{ href: null }} /> */}
-
       {/* <Tabs.Screen name="profile/home" options={{ href: null }} /> */}
     </Tabs>
   );
