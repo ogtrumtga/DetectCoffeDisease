@@ -1,8 +1,8 @@
 //  src/features/Weather/views/ExplainSprayRuleScreen.tsx
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Pressable } from 'react-native';
-import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { DeltaTChart } from '../components/DeltaTChart';
+import { useRouter } from 'expo-router';
+import { Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { DeltaTHumidityChart } from '../components/DeltaTHumidityChart';
 import { SprayCondition } from '../models';
 import { formatHour } from '../utils';
 
@@ -204,7 +204,7 @@ export function ExplainSprayRuleScreen({ onClose, conditions = [] }: ExplainSpra
 
           {/* Delta T Chart */}
           <View style={styles.chartContainer}>
-            <DeltaTChart />
+            <DeltaTHumidityChart />
           </View>
 
           {/* Delta T Legend */}
@@ -218,28 +218,28 @@ export function ExplainSprayRuleScreen({ onClose, conditions = [] }: ExplainSpra
             <View style={styles.deltaTItems}>
               <View style={styles.deltaTItem}>
                 <View style={[styles.deltaTIcon, { backgroundColor: '#FFE5B4' }]}>
-                  <Ionicons name="warning-outline" size={16} color="#000" />
+                  <Ionicons name="warning-outline" size={14} color="#000" />
                 </View>
                 <Text style={styles.deltaTLabel}>0-2</Text>
               </View>
 
               <View style={styles.deltaTItem}>
                 <View style={[styles.deltaTIcon, { backgroundColor: '#B8E6D5' }]}>
-                  <Ionicons name="checkmark-circle-outline" size={16} color="#000" />
+                  <Ionicons name="checkmark-circle-outline" size={14} color="#000" />
                 </View>
                 <Text style={styles.deltaTLabel}>2-8</Text>
               </View>
 
               <View style={styles.deltaTItem}>
                 <View style={[styles.deltaTIcon, { backgroundColor: '#FFE5B4' }]}>
-                  <Ionicons name="warning-outline" size={16} color="#000" />
+                  <Ionicons name="warning-outline" size={14} color="#000" />
                 </View>
                 <Text style={styles.deltaTLabel}>8-10</Text>
               </View>
 
               <View style={styles.deltaTItem}>
                 <View style={[styles.deltaTIcon, { backgroundColor: '#FFB8C6' }]}>
-                  <Ionicons name="close-circle-outline" size={16} color="#000" />
+                  <Ionicons name="close-circle-outline" size={14} color="#000" />
                 </View>
                 <Text style={styles.deltaTLabel}>{'>'}10</Text>
               </View>
@@ -256,21 +256,21 @@ export function ExplainSprayRuleScreen({ onClose, conditions = [] }: ExplainSpra
             <View style={styles.rainItems}>
               <View style={styles.rainItem}>
                 <View style={[styles.rainIcon, { backgroundColor: '#B8E6D5' }]}>
-                  <Ionicons name="checkmark-circle-outline" size={16} color="#000" />
+                  <Ionicons name="checkmark-circle-outline" size={14} color="#000" />
                 </View>
                 <Text style={styles.rainLabel}>Không mưa</Text>
               </View>
 
               <View style={styles.rainItem}>
                 <View style={[styles.rainIcon, { backgroundColor: '#FFE5B4' }]}>
-                  <Ionicons name="warning-outline" size={16} color="#000" />
+                  <Ionicons name="warning-outline" size={14} color="#000" />
                 </View>
                 <Text style={styles.rainLabel}>{'<'} 0.1</Text>
               </View>
 
               <View style={styles.rainItem}>
                 <View style={[styles.rainIcon, { backgroundColor: '#FFB8C6' }]}>
-                  <Ionicons name="close-circle-outline" size={16} color="#000" />
+                  <Ionicons name="close-circle-outline" size={14} color="#000" />
                 </View>
                 <Text style={styles.rainLabel}>{'>'} 0.1</Text>
               </View>
@@ -291,21 +291,21 @@ export function ExplainSprayRuleScreen({ onClose, conditions = [] }: ExplainSpra
             <View style={styles.windItems}>
               <View style={styles.windItem}>
                 <View style={[styles.windIcon, { backgroundColor: '#B8E6D5' }]}>
-                  <Ionicons name="checkmark-circle-outline" size={16} color="#000" />
+                  <Ionicons name="checkmark-circle-outline" size={14} color="#000" />
                 </View>
                 <Text style={styles.windLabel}>{'<'} 12</Text>
               </View>
 
               <View style={styles.windItem}>
                 <View style={[styles.windIcon, { backgroundColor: '#FFE5B4' }]}>
-                  <Ionicons name="warning-outline" size={16} color="#000" />
+                  <Ionicons name="warning-outline" size={14} color="#000" />
                 </View>
                 <Text style={styles.windLabel}>12-25</Text>
               </View>
 
               <View style={styles.windItem}>
                 <View style={[styles.windIcon, { backgroundColor: '#FFB8C6' }]}>
-                  <Ionicons name="close-circle-outline" size={16} color="#000" />
+                  <Ionicons name="close-circle-outline" size={14} color="#000" />
                 </View>
                 <Text style={styles.windLabel}>{'>'} 25</Text>
               </View>
@@ -492,32 +492,32 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   subsection: {
-    marginTop: 12,
-    marginLeft: 12,
-    paddingLeft: 12,
+    marginTop: 8,
+    marginLeft: 8,
+    paddingLeft: 8,
   },
   subsectionTitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: '#000',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   subsectionText: {
-    fontSize: 13,
+    fontSize: 11,
     color: '#666',
-    lineHeight: 18,
-    marginBottom: 8,
+    lineHeight: 16,
+    marginBottom: 6,
   },
   chartContainer: {
-    marginTop: 12,
+    marginTop: 8,
     alignItems: 'center',
     backgroundColor: '#fff',
   },
   deltaTLegendContainer: {
-    marginTop: 12,
-    marginLeft: 12,
-    paddingTop: 12,
-    paddingLeft: 12,
+    marginTop: 8,
+    marginLeft: 8,
+    paddingTop: 8,
+    paddingLeft: 8,
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
   },
@@ -528,19 +528,19 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   deltaTTitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: '#000',
   },
   deltaTUnit: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: '#666',
   },
   deltaTSubtitle: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#666',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   deltaTItems: {
     flexDirection: 'row',
@@ -551,23 +551,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   deltaTIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 3,
   },
   deltaTLabel: {
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: '600',
     color: '#555',
   },
   rainContainer: {
-    marginTop: 12,
-    marginLeft: 12,
-    paddingTop: 12,
-    paddingLeft: 12,
+    marginTop: 8,
+    marginLeft: 8,
+    paddingTop: 8,
+    paddingLeft: 8,
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
   },
@@ -575,15 +575,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   rainTitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: '#000',
   },
   rainUnit: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: '#666',
   },
@@ -591,34 +591,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   rainItem: {
     alignItems: 'center',
   },
   rainIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 3,
   },
   rainLabel: {
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: '600',
     color: '#555',
   },
   rainDescription: {
-    fontSize: 13,
+    fontSize: 11,
     color: '#666',
-    lineHeight: 18,
+    lineHeight: 16,
   },
   windContainer: {
-    marginTop: 12,
-    marginLeft: 12,
-    paddingTop: 12,
-    paddingLeft: 12,
+    marginTop: 8,
+    marginLeft: 8,
+    paddingTop: 8,
+    paddingLeft: 8,
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
   },
@@ -626,15 +626,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   windTitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: '#000',
   },
   windUnit: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: '#666',
   },
@@ -642,28 +642,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   windItem: {
     alignItems: 'center',
   },
   windIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 3,
   },
   windLabel: {
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: '600',
     color: '#555',
   },
   windDescription: {
-    fontSize: 13,
+    fontSize: 11,
     color: '#666',
-    lineHeight: 18,
+    lineHeight: 16,
   },
   trustContainer: {
     marginTop: 12,

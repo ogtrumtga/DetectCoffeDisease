@@ -1,6 +1,7 @@
 // MyNewProject/app/_layout.tsx
 //import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AuthProvider } from "../context/AuthContext";
 
 export default function RootLayout() {
@@ -10,12 +11,14 @@ export default function RootLayout() {
 
   // if (!loaded) return null;
   return (
-    <AuthProvider>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="auth" options={{ presentation: "modal" }} />
-      </Stack>
-    </AuthProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AuthProvider>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="auth" options={{ presentation: "modal" }} />
+        </Stack>
+      </AuthProvider>
+    </GestureHandlerRootView>
   );
 }

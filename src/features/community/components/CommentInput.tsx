@@ -3,21 +3,21 @@
  * Input để nhập bình luận với khả năng reply
  */
 
+import { IconSymbol } from '@/components/ui/icon-symbol';
 import React, { useState } from 'react';
 import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+import { VALIDATION_MESSAGES, VALIDATION_RULES } from '../constants';
+import { CommunityColors } from '../design-system';
 import { Comment } from '../models';
 import { commentStyles } from '../styles';
-import { CommunityColors } from '../design-system';
-import { VALIDATION_RULES, VALIDATION_MESSAGES } from '../constants';
 
 interface CommentInputProps {
   onSubmit: (content: string, parentId?: string) => void;

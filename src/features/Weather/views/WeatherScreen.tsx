@@ -1,16 +1,16 @@
 //src/features/Weather/views/WeatherScreen.tsx
-import React, { useRef } from 'react';
-import { View, Text, ScrollView, RefreshControl, TouchableOpacity, ActivityIndicator, Animated, Platform, StatusBar } from 'react-native';
-import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { weatherStyles } from '../styles';
-import { useWeatherVM, useSprayTimeVM } from '../viewmodels';
+import { useRouter } from 'expo-router';
+import React, { useRef } from 'react';
+import { ActivityIndicator, Animated, Platform, RefreshControl, StatusBar, Text, TouchableOpacity, View } from 'react-native';
 import {
-  CurrentWeatherCard,
-  HourlyForecastList,
-  DailyForecastList,
-  SprayTimePanel,
+    CurrentWeatherCard,
+    DailyForecastList,
+    HourlyForecastList,
+    SprayTimePanel,
 } from '../components';
+import { weatherStyles } from '../styles';
+import { useSprayTimeVM, useWeatherVM } from '../viewmodels';
 
 export function WeatherScreen() {
   const router = useRouter();

@@ -3,25 +3,25 @@
  * Màn hình hiển thị danh sách notifications
  */
 
-import React, { useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
-} from 'react-native';
-import { router } from 'expo-router';
 import { SafeArea } from '@/components/SafeArea';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { useNotificationVM } from '../viewmodels';
-import { notificationStyles } from '../styles';
+import { router } from 'expo-router';
+import { useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    RefreshControl,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
+} from 'react-native';
+import { SwipeableNotificationItem } from '../components';
 import { CommunityColors } from '../design-system';
-import { NotificationItem } from '../components';
 import { Notification } from '../models';
+import { notificationStyles } from '../styles';
+import { useNotificationVM } from '../viewmodels';
 
 export default function NotificationScreen() {
   const [showMenu, setShowMenu] = useState(false);
@@ -58,7 +58,7 @@ export default function NotificationScreen() {
       console.log('NotificationScreen - navigating with params:', navParams);
       
       router.push({
-        pathname: '../PostDetailScreen',
+        pathname: '/(tabs)/community/post-detail',
         params: navParams
       });
     }
@@ -94,9 +94,10 @@ export default function NotificationScreen() {
   };
 
   const renderNotification = ({ item }: { item: Notification }) => (
-    <NotificationItem
+    <SwipeableNotificationItem
       notification={item}
       onPress={onNotificationPress}
+      onDelete={handleDeleteNotification}
     />
   );
 

@@ -3,18 +3,18 @@
  * Màn hình chính của community feature
  */
 // src/features/community/views/CommunityScreen.tsx
-import React from "react";
-import { View, Share, Alert, Platform } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
 import { SafeArea } from "@/components/SafeArea";
-import { useCommunityVM } from "../viewmodels";
-import { communityStyles } from "../styles";
+import { router, useLocalSearchParams } from "expo-router";
+import React from "react";
+import { Alert, Share, View } from "react-native";
 import {
-  CommunityHeader,
-  CommunityFeed,
-  CreatePostButton,
+    CommunityFeed,
+    CommunityHeader,
+    CreatePostButton,
 } from "../components";
 import { CommunityPost } from "../models";
+import { communityStyles } from "../styles";
+import { useCommunityVM } from "../viewmodels";
 
 export default function CommunityHome() {
   const params = useLocalSearchParams();
@@ -69,8 +69,7 @@ export default function CommunityHome() {
     const selectedPost = posts.find((p) => p.id === postId);
     if (selectedPost) {
       router.push({
-        // pathname: '/post-detail',
-        pathname: "../PostDetailScreen",
+        pathname: "/(tabs)/community/post-detail",
         params: {
           postId: postId,
           postData: JSON.stringify(selectedPost),
@@ -83,7 +82,7 @@ export default function CommunityHome() {
     const selectedPost = posts.find((p) => p.id === postId);
     if (selectedPost) {
       router.push({
-        pathname: "../PostDetailScreen",
+        pathname: "/(tabs)/community/post-detail",
         params: {
           postId: postId,
           postData: JSON.stringify(selectedPost),
@@ -93,11 +92,11 @@ export default function CommunityHome() {
   };
 
   const handleCreatePost = () => {
-    router.push("../CreatePostScreen");
+    router.push("/(tabs)/community/create-post");
   };
 
   const handleNotificationPress = () => {
-    router.push("../NotificationModalScreen");
+    router.push("/(tabs)/community/notification-modal");
   };
 
   const handleShare = async (postId: string) => {

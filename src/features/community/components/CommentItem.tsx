@@ -3,12 +3,12 @@
  * Hiển thị một comment với nested replies
  */
 
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import React, { useEffect, useState } from 'react';
+import { Text, TouchableOpacity, View } from 'react-native';
+import { CommunityColors } from '../design-system';
 import { Comment } from '../models';
 import { commentStyles } from '../styles';
-import { CommunityColors } from '../design-system';
 
 interface CommentItemProps {
   comment: Comment;
@@ -114,9 +114,9 @@ export function CommentItem({ comment, onLike, onReply, isReply = false, highlig
                 onPress={handleLike}
               >
                 <IconSymbol 
-                  name={comment.isLiked ? "heart.fill" : "heart"} 
+                  name={comment.isLiked ? "hand.thumbsup.fill" : "hand.thumbsup"} 
                   size={16} 
-                  color={comment.isLiked ? CommunityColors.likeButtonActive : CommunityColors.captionText}
+                  color={comment.isLiked ? CommunityColors.likeButton : CommunityColors.captionText}
                 />
                 {(comment.likes || 0) > 0 && (
                   <Text style={commentStyles.commentActionText}>

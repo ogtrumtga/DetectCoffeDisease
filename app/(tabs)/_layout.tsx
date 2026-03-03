@@ -10,26 +10,37 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#2D3142",
+        tabBarActiveTintColor: "#FFFFFF",
         tabBarInactiveTintColor: "#555",
         tabBarStyle: {
           backgroundColor: "#ABE0AC",
-          height: 70,
+          height: 90,
           paddingHorizontal: 12,
+          paddingTop: 17.5,
+          paddingBottom: 0,
           borderTopWidth: 0,
         },
         tabBarItemStyle: {
-          height: 48,
-          borderRadius: 14,
-          marginVertical: 6,
+          flexDirection: 'column',
+          justifyContent: 'flex-end',
+          alignItems: 'center',
+          flex: 1,
+          paddingVertical: 0,
+          gap: 4,
         },
-        tabBarIconStyle: { marginTop: 2 },
+        tabBarIconStyle: { 
+          marginTop: 0,
+          marginBottom: 0,
+        },
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: "600",
-          marginBottom: 4,
+          marginTop: 0,
+          marginBottom: 0,
+          textAlign: 'center',
         },
-        tabBarActiveBackgroundColor: "#FFFFFF",
+        tabBarActiveBackgroundColor: "transparent",
+        tabBarInactiveBackgroundColor: "transparent",
       }}
     >
       <Tabs.Screen
@@ -83,12 +94,6 @@ export default function TabLayout() {
       <Tabs.Screen name="community/post-detail" options={{ href: null }} />
       <Tabs.Screen name="Weather/weather" options={{ href: null }} />
       <Tabs.Screen name="Weather/spray-time-modal" options={{ href: null }} />
-      {/* <Tabs.Screen name="camera/camera-screen" options={{ href: null }} />
-      <Tabs.Screen name="camera/confirm-screen" options={{ href: null }} />
-      <Tabs.Screen name="camera/result-screen" options={{ href: null }} />
-      <Tabs.Screen name="camera/detail-screen" options={{ href: null }} />
-      <Tabs.Screen name="profile/detail" options={{ href: null }} /> */}
-      {/* <Tabs.Screen name="profile/home" options={{ href: null }} /> */}
     </Tabs>
   );
 }

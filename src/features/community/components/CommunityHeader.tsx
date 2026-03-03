@@ -3,13 +3,12 @@
  * Header với search và notification cho community
  */
 
-import React from 'react';
-import { View, Text, TextInput, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { communityStyles } from '../styles';
-import { CommunityColors } from '../design-system';
+import { useRouter } from 'expo-router';
+import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useNotificationContext } from '../contexts/NotificationContext';
+import { CommunityColors } from '../design-system';
+import { communityStyles } from '../styles';
 
 interface CommunityHeaderProps {
   searchQuery: string;
@@ -43,14 +42,6 @@ export function CommunityHeader({
           onChangeText={onSearchChange}
         />
       </View>
-      
-      {/* Weather Button - TEST */}
-      <TouchableOpacity 
-        style={communityStyles.notificationButton}
-        onPress={() => router.push('/weather')}
-      >
-        <Text style={{ fontSize: 24 }}>☀️</Text>
-      </TouchableOpacity>
       
       {/* Notification Button */}
       <TouchableOpacity 

@@ -3,14 +3,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { Stack, useRouter } from "expo-router";
 import { useState } from "react";
 import {
-  ActivityIndicator,
-  Dimensions,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Dimensions,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 const { width } = Dimensions.get("window");
@@ -38,7 +38,7 @@ export default function ProfileEditScreen() {
 
       if (isError) {
         router.push({
-          pathname: "../error",
+          pathname: "/error",
           params: {
             title: "Cập nhật thất bại",
             message:
@@ -57,7 +57,7 @@ export default function ProfileEditScreen() {
 
     if (logoutFailed) {
       router.push({
-        pathname: "../error",
+        pathname: "/error",
         params: {
           title: "Lỗi đăng xuất",
           message: "Có lỗi xảy ra trong quá trình xóa phiên đăng nhập.",

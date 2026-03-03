@@ -3,26 +3,31 @@ import { NotificationProvider } from "../../../src/features/community/contexts/N
 
 export default function CommunityLayout() {
   return (
-    
     <NotificationProvider>
-      <Stack>
+      <Stack
+        screenOptions={{
+          contentStyle: {
+            backgroundColor: '#F8F9FA',
+          },
+        }}
+      >
         <Stack.Screen
           name="communityIndex"
           options={{ headerShown: false, title: "Cộng đồng" }}
         />
         <Stack.Screen
           name="create-post"
-          options={{ headerShown: true, title: "Tạo bài viết" }}
+          options={{ headerShown: false, title: "Tạo bài viết" }}
         />
         <Stack.Screen
           name="post-detail"
-          options={{ headerShown: true, title: "Chi tiết bài viết" }}
+          options={{ headerShown: false, title: "Chi tiết bài viết" }}
         />
         <Stack.Screen
           name="notification-modal"
           options={{
             presentation: "modal",
-            title: "Thông báo",
+            headerShown: false,
           }}
         />
       </Stack>
