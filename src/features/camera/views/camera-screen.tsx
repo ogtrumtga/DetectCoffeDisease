@@ -1,28 +1,52 @@
 // src/features/camera/views/camera-screen.tsx
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
-    Image,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Dimensions,
+  Image,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
+const { width } = Dimensions.get("window");
+
 export default function CameraScreen() {
+  const navigation = useNavigation();
   const [facing, setFacing] = useState<"back" | "front">("back");
   const [permission, requestPermission] = useCameraPermissions();
   const [photo, setPhoto] = useState<string | null>(null);
   const [isPreview, setIsPreview] = useState(false);
   const cameraRef = useRef<CameraView>(null);
 
-  if (!permission) {
-    return <View />;
-  }
+  useEffect(() => {
+    const parent = navigation.getParent();
+
+    parent?.setOptions({
+      tabBarStyle: { display: "none" },
+    });
+
+    return () => {
+      parent?.setOptions({
+        tabBarStyle: {
+          backgroundColor: "#ABE0AC",
+          height: 90,
+          paddingHorizontal: 12,
+          paddingTop: 17.5,
+          borderTopWidth: 0,
+          display: "flex",
+        },
+      });
+    };
+  }, [navigation]);
+
+  if (!permission) return <View />;
 
   if (!permission.granted) {
     return (
@@ -44,13 +68,9 @@ export default function CameraScreen() {
           setIsPreview(true);
         }
       } catch (err) {
-        // Gọi Error Screen khi lỗi chụp ảnh
         router.push({
           pathname: "/error",
-          params: {
-            title: "Lỗi Camera",
-            message: "Không thể thực hiện chụp ảnh. Vui lòng thử lại.",
-          },
+          params: { title: "Lỗi Camera", message: "Không thể chụp ảnh." },
         });
       }
     }
@@ -60,38 +80,30 @@ export default function CameraScreen() {
     try {
       const permissionResult =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
-
       if (!permissionResult.granted) {
-        // Gọi Error Screen khi không cấp quyền thư viện
         router.push({
           pathname: "/error",
           params: {
-            title: "Cần quyền truy cập",
-            message: "Bạn cần cấp quyền truy cập thư viện ảnh để tiếp tục.",
+            title: "Cần quyền",
+            message: "Cần quyền truy cập thư viện.",
           },
         });
         return;
       }
-
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
         quality: 1,
       });
-
       if (!result.canceled && result.assets[0]?.uri) {
         setPhoto(result.assets[0].uri);
         setIsPreview(true);
       }
     } catch (err) {
-      // Gọi Error Screen khi lỗi chọn ảnh
       router.push({
         pathname: "/error",
-        params: {
-          title: "Lỗi",
-          message: "Không thể chọn ảnh từ thư viện vào lúc này.",
-        },
+        params: { title: "Lỗi", message: "Không thể chọn ảnh." },
       });
     }
   };
@@ -108,10 +120,6 @@ export default function CameraScreen() {
         params: { imageUri: photo },
       });
     }
-  };
-
-  const toggleCameraFacing = () => {
-    setFacing((current) => (current === "back" ? "front" : "back"));
   };
 
   return (
@@ -135,20 +143,22 @@ export default function CameraScreen() {
             facing={facing}
             mode="picture"
           >
+            {/* Viewfinder Overlay - Khung chụp hình */}
             <View style={styles.overlay}>
-              <View style={styles.guideFrame}>
-                <View style={styles.cornerTopLeft} />
-                <View style={styles.cornerTopRight} />
-                <View style={styles.cornerBottomLeft} />
-                <View style={styles.cornerBottomRight} />
-                <Text style={styles.guideText}>Đưa lá cây vào khung</Text>
+              <View style={styles.viewfinder}>
+                {/* 4 góc của khung ngắm */}
+                <View style={[styles.corner, styles.topLeft]} />
+                <View style={[styles.corner, styles.topRight]} />
+                <View style={[styles.corner, styles.bottomLeft]} />
+                <View style={[styles.corner, styles.bottomRight]} />
               </View>
+              <Text style={styles.hintText}>
+                Căn chỉnh vật thể vào giữa khung hình
+              </Text>
             </View>
           </CameraView>
-        ) : photo ? (
-          <Image source={{ uri: photo }} style={styles.camera} />
         ) : (
-          <View style={[styles.camera, { backgroundColor: "#000" }]} />
+          <Image source={{ uri: photo! }} style={styles.camera} />
         )}
       </View>
 
@@ -158,17 +168,15 @@ export default function CameraScreen() {
             <TouchableOpacity style={styles.controlButton} onPress={pickImage}>
               <Ionicons name="images-outline" size={30} color="white" />
             </TouchableOpacity>
-
             <TouchableOpacity
               style={styles.captureButton}
               onPress={takePicture}
             >
               <View style={styles.captureButtonInner} />
             </TouchableOpacity>
-
             <TouchableOpacity
               style={styles.controlButton}
-              onPress={toggleCameraFacing}
+              onPress={() => setFacing(facing === "back" ? "front" : "back")}
             >
               <Ionicons name="camera-reverse-outline" size={30} color="white" />
             </TouchableOpacity>
@@ -182,7 +190,6 @@ export default function CameraScreen() {
               <Ionicons name="refresh" size={24} color="#333" />
               <Text style={styles.previewButtonText}>Chụp lại</Text>
             </TouchableOpacity>
-
             <TouchableOpacity
               style={styles.confirmButton}
               onPress={confirmPicture}
@@ -198,10 +205,7 @@ export default function CameraScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#000",
-  },
+  container: { flex: 1, backgroundColor: "#000" },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -210,90 +214,67 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     backgroundColor: "#2D3142",
   },
-  backButton: {
-    padding: 5,
-  },
-  headerTitle: {
-    color: "white",
-    fontSize: 18,
-    fontWeight: "600",
-  },
-  cameraContainer: {
-    flex: 1,
-    overflow: "hidden",
-  },
-  camera: {
-    flex: 1,
-  },
+  headerTitle: { color: "white", fontSize: 18, fontWeight: "600" },
+  backButton: { padding: 5 },
+  cameraContainer: { flex: 1 },
+  camera: { flex: 1 },
+  // Overlay styles
   overlay: {
     flex: 1,
     backgroundColor: "transparent",
     justifyContent: "center",
     alignItems: "center",
   },
-  guideFrame: {
-    width: 300,
-    height: 300,
-    borderWidth: 2,
-    borderColor: "rgba(255, 255, 255, 0.5)",
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
+  viewfinder: {
+    width: width * 0.7,
+    height: width * 0.9, // Tỉ lệ khung hình đứng giống hình mẫu
+    backgroundColor: "transparent",
     position: "relative",
   },
-  cornerTopLeft: {
+  corner: {
     position: "absolute",
-    top: -2,
-    left: -2,
-    width: 30,
-    height: 30,
+    width: 40,
+    height: 40,
+    borderColor: "white",
+  },
+  topLeft: {
+    top: 0,
+    left: 0,
     borderTopWidth: 4,
     borderLeftWidth: 4,
-    borderColor: "#ABE0AC",
-    borderTopLeftRadius: 10,
+    borderTopLeftRadius: 20,
   },
-  cornerTopRight: {
-    position: "absolute",
-    top: -2,
-    right: -2,
-    width: 30,
-    height: 30,
+  topRight: {
+    top: 0,
+    right: 0,
     borderTopWidth: 4,
     borderRightWidth: 4,
-    borderColor: "#ABE0AC",
-    borderTopRightRadius: 10,
+    borderTopRightRadius: 20,
   },
-  cornerBottomLeft: {
-    position: "absolute",
-    bottom: -2,
-    left: -2,
-    width: 30,
-    height: 30,
+  bottomLeft: {
+    bottom: 0,
+    left: 0,
     borderBottomWidth: 4,
     borderLeftWidth: 4,
-    borderColor: "#ABE0AC",
-    borderBottomLeftRadius: 10,
+    borderBottomLeftRadius: 20,
   },
-  cornerBottomRight: {
-    position: "absolute",
-    bottom: -2,
-    right: -2,
-    width: 30,
-    height: 30,
+  bottomRight: {
+    bottom: 0,
+    right: 0,
     borderBottomWidth: 4,
     borderRightWidth: 4,
-    borderColor: "#ABE0AC",
-    borderBottomRightRadius: 10,
+    borderBottomRightRadius: 20,
   },
-  guideText: {
+  hintText: {
     color: "white",
-    fontSize: 14,
     marginTop: 20,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    paddingHorizontal: 15,
-    paddingVertical: 5,
-    borderRadius: 10,
+    fontSize: 14,
+    textAlign: "center",
+    backgroundColor: "rgba(0,0,0,0.3)",
+    paddingHorizontal: 10,
+    borderRadius: 5,
   },
+  // Controls styles
   controls: {
     flexDirection: "row",
     justifyContent: "space-around",
@@ -301,9 +282,7 @@ const styles = StyleSheet.create({
     paddingVertical: 25,
     backgroundColor: "#2D3142",
   },
-  controlButton: {
-    padding: 15,
-  },
+  controlButton: { padding: 15 },
   captureButton: {
     width: 70,
     height: 70,
@@ -328,12 +307,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 25,
   },
-  previewButtonText: {
-    marginLeft: 8,
-    fontSize: 16,
-    color: "#333",
-    fontWeight: "500",
-  },
+  previewButtonText: { marginLeft: 8, fontSize: 16, color: "#333" },
   confirmButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -342,48 +316,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 25,
   },
-  confirmButtonText: {
-    marginLeft: 8,
-    fontSize: 16,
-    color: "white",
-    fontWeight: "500",
-  },
-  instructions: {
-    backgroundColor: "#1A1A1A",
-    padding: 15,
-    borderTopWidth: 1,
-    borderTopColor: "#333",
-  },
-  instructionTitle: {
-    color: "#FFF",
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 10,
-  },
-  instructionItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  instructionText: {
-    color: "#AAA",
-    fontSize: 13,
-    marginLeft: 10,
-  },
-  message: {
-    textAlign: "center",
-    paddingBottom: 10,
-    color: "white",
-  },
-  button: {
-    alignSelf: "center",
-    alignItems: "center",
-    backgroundColor: "#ABE0AC",
-    padding: 10,
-    borderRadius: 10,
-  },
-  buttonText: {
-    fontSize: 16,
-    color: "#2D3142",
-  },
+  confirmButtonText: { marginLeft: 8, fontSize: 16, color: "white" },
+  message: { color: "white", textAlign: "center", marginBottom: 20 },
+  button: { backgroundColor: "#ABE0AC", padding: 15, borderRadius: 10 },
+  buttonText: { color: "#2D3142", fontWeight: "bold" },
 });

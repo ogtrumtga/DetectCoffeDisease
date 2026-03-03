@@ -1,14 +1,29 @@
 // src/features/camera/views/index-screen.tsx
-
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 import * as Location from "expo-location";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export default function HomeScreen() {
+  const navigation = useNavigation();
   const [locationAllowed, setLocationAllowed] = useState(false);
   const [temperature, setTemperature] = useState<number | null>(null);
+
+  useEffect(() => {
+    const parent = navigation.getParent();
+    parent?.setOptions({
+      tabBarStyle: {
+        backgroundColor: "#ABE0AC",
+        height: 90,
+        paddingHorizontal: 12,
+        paddingTop: 17.5,
+        borderTopWidth: 0,
+        display: "flex",
+      },
+    });
+  }, [navigation]);
 
   const navigateToCamera = () => {
     router.push("/(tabs)/camera/cameraScreen");
@@ -21,21 +36,16 @@ export default function HomeScreen() {
   const handleAllowLocation = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-
       if (status !== "granted") {
         Alert.alert("Lỗi", "Bạn chưa cho phép vị trí");
         return;
       }
-
       setLocationAllowed(true);
-
       const location = await Location.getCurrentPositionAsync({});
       const { latitude, longitude } = location.coords;
-
       const res = await fetch(
         `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`,
       );
-
       const data = await res.json();
       setTemperature(data.current_weather.temperature);
     } catch (e) {
@@ -60,7 +70,6 @@ export default function HomeScreen() {
                 {temperature !== null ? `${temperature}°C` : "--"}
               </Text>
             </View>
-
             <Ionicons name="cloudy-night" size={24} color="#5DADE2" />
           </TouchableOpacity>
 
@@ -82,13 +91,11 @@ export default function HomeScreen() {
             size={20}
             color={locationAllowed ? "#2A9D8F" : "#333"}
           />
-
           <Text style={styles.locationText}>
             {locationAllowed
               ? "Đã xác định vị trí để cập nhật thời tiết."
               : "Cho phép truy cập vị trí để xem thời tiết"}
           </Text>
-
           {!locationAllowed && (
             <TouchableOpacity onPress={handleAllowLocation}>
               <Text style={styles.allowLink}>Cho phép</Text>
@@ -107,16 +114,12 @@ export default function HomeScreen() {
             </TouchableOpacity>
             <Text style={styles.stepText}>Chụp ảnh</Text>
           </View>
-
           <Ionicons name="arrow-forward" size={20} color="#333" />
-
           <View style={styles.step}>
             <Ionicons name="document-text" size={24} color="#E9C46A" />
             <Text style={styles.stepText}>Chuẩn đoán</Text>
           </View>
-
           <Ionicons name="arrow-forward" size={20} color="#333" />
-
           <View style={styles.step}>
             <Ionicons name="medical" size={40} color="#2A9D8F" />
             <Text style={styles.stepText}>Thuốc</Text>
@@ -204,16 +207,12 @@ const styles = StyleSheet.create({
   },
   locationText: {
     flex: 1,
-    fontSize: 12, // Tăng nhẹ size chữ
+    fontSize: 12,
     color: "#666",
     marginHorizontal: 10,
     lineHeight: 18,
   },
-  allowLink: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#3F51B5",
-  },
+  allowLink: { fontSize: 14, fontWeight: "bold", color: "#3F51B5" },
   workflow: {
     flexDirection: "row",
     alignItems: "center",
@@ -223,7 +222,7 @@ const styles = StyleSheet.create({
   },
   step: { alignItems: "center" },
   dashedBox: {
-    width: 60, // Tăng size icon chụp ảnh
+    width: 60,
     height: 60,
     borderStyle: "dashed",
     borderWidth: 1.5,
@@ -232,21 +231,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: 12,
   },
-  iconCircle: {
-    width: 55,
-    height: 55,
-    borderRadius: 28,
-    justifyContent: "center",
-    alignItems: "center",
-    position: "relative",
-  },
-  checkBadge: {
-    position: "absolute",
-    bottom: -2,
-    right: -2,
-    backgroundColor: "white",
-    borderRadius: 10,
-  },
   stepText: { fontSize: 13, marginTop: 8, fontWeight: "bold", color: "#333" },
   mainButton: {
     backgroundColor: "#ABE0AC",
@@ -254,9 +238,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 70,
     borderRadius: 35,
   },
-  buttonText: {
-    color: "white",
-    fontSize: 20,
-    fontWeight: "bold",
-  },
+  buttonText: { color: "white", fontSize: 20, fontWeight: "bold" },
 });

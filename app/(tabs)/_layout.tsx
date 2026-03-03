@@ -57,7 +57,6 @@ export default function TabLayout() {
         name="community"
         options={{
           title: "Cộng đồng",
-          href: isLoggedIn ? "/community" : (null as any),
           tabBarIcon: ({ color }) => (
             <Ionicons
               name="chatbubble-ellipses-outline"
@@ -94,6 +93,17 @@ export default function TabLayout() {
       <Tabs.Screen name="community/post-detail" options={{ href: null }} />
       <Tabs.Screen name="Weather/weather" options={{ href: null }} />
       <Tabs.Screen name="Weather/spray-time-modal" options={{ href: null }} />
+      {/* <Tabs.Screen name="camera/camera-screen" options={{ href: null }} />
+
+      <Tabs.Screen name="camera/confirm-screen" options={{ href: null }} />
+
+      <Tabs.Screen name="camera/result-screen" options={{ href: null }} />
+
+      <Tabs.Screen name="camera/detail-screen" options={{ href: null }} />
+
+      <Tabs.Screen name="profile/detail" options={{ href: null }} /> */}
+
+      {/* <Tabs.Screen name="profile/home" options={{ href: null }} /> */}
     </Tabs>
   );
 }

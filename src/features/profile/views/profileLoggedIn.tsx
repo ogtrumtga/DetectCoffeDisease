@@ -1,5 +1,5 @@
 // src/features/profile/views/profileLoggedIn.tsx
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Stack, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -13,8 +13,7 @@ import {
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Swipeable from "react-native-gesture-handler/Swipeable";
 
-// Giả lập một Global Store đơn giản cho mục đích demo
-// Trong thực tế, bạn nên dùng Context API hoặc Redux
+// Giả lập một Global Store đơn giản
 export let globalHistoryData = [
   { id: "1", title: "C", date: "8 tháng 1" },
   { id: "2", title: "không khô quả", date: "Ngày 1 tháng 12 năm 2025" },
@@ -26,7 +25,6 @@ export default function ProfileHomeScreen() {
   const [historyData, setHistoryData] = useState(globalHistoryData);
   const router = useRouter();
 
-  // Cập nhật lại dữ liệu mỗi khi màn hình được focus (để thấy dữ liệu mới từ DetailScreen)
   useEffect(() => {
     setHistoryData([...globalHistoryData]);
   }, []);
@@ -38,8 +36,8 @@ export default function ProfileHomeScreen() {
       date: "Ngày 21 tháng 5 năm 2025",
       title: "Câu hỏi",
       description: "Mô là bánh",
-      likes: 2,
-      comments: 2,
+      likes: 0,
+      comments: 0,
     },
   ];
 
@@ -58,7 +56,7 @@ export default function ProfileHomeScreen() {
         });
       } else {
         const newData = historyData.filter((item) => item.id !== id);
-        globalHistoryData = newData; // Cập nhật store giả
+        globalHistoryData = newData;
         setHistoryData(newData);
       }
     }, 1000);
@@ -117,20 +115,36 @@ export default function ProfileHomeScreen() {
         </View>
         <Text style={styles.postTitle}>{String(item.title)}</Text>
         <Text style={styles.postDescription}>{String(item.description)}</Text>
+
+        {/* Phần Footer chứa các icon đã sửa giống ảnh 100% */}
         <View style={styles.postFooter}>
           <View style={styles.interactionGroup}>
             <TouchableOpacity style={styles.iconBtn}>
-              <Ionicons name="thumbs-up-outline" size={20} color="#666" />
+              <MaterialCommunityIcons
+                name="thumb-up"
+                size={22}
+                color="#728096"
+              />
               <Text style={styles.interactionText}>{String(item.likes)}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.iconBtn}>
-              <Ionicons name="chatbubble-outline" size={20} color="#666" />
+              <MaterialCommunityIcons
+                name="comment-outline"
+                size={22}
+                color="#728096"
+              />
               <Text style={styles.interactionText}>
                 {String(item.comments)}
               </Text>
             </TouchableOpacity>
           </View>
-          <Ionicons name="share-social-outline" size={20} color="#666" />
+          <TouchableOpacity>
+            <MaterialCommunityIcons
+              name="share-variant"
+              size={22}
+              color="#728096"
+            />
+          </TouchableOpacity>
         </View>
       </View>
     </View>
@@ -321,5 +335,10 @@ const styles = StyleSheet.create({
   },
   interactionGroup: { flexDirection: "row" },
   iconBtn: { flexDirection: "row", alignItems: "center", marginRight: 20 },
-  interactionText: { fontSize: 12, color: "#666", marginLeft: 5 },
+  interactionText: {
+    fontSize: 14,
+    color: "#728096",
+    marginLeft: 8,
+    fontWeight: "500",
+  },
 });

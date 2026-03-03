@@ -29,12 +29,10 @@ export default function ResultScreen() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Mô phỏng việc fetch dữ liệu chẩn đoán từ API
     const fetchDiagnosis = async () => {
       try {
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
-        // Giả lập lỗi không tìm thấy dữ liệu (ví dụ 5% trường hợp)
         const isDataError = Math.random() < 0.05;
 
         if (isDataError) {
@@ -71,6 +69,11 @@ export default function ResultScreen() {
     router.push("/(tabs)/camera/cameraScreen");
   };
 
+  const handleBackToCameraIndex = () => {
+    // router.replace("/(tabs)/camera/cameraIndex");
+    router.navigate("/(tabs)/camera/cameraIndex");
+  };
+
   if (isLoading) {
     return (
       <View
@@ -92,10 +95,10 @@ export default function ResultScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={handleBackToCameraIndex}
             style={styles.backButton}
           >
-            {/* <Ionicons name="arrow-back" size={24} color="white" /> */}
+            <Ionicons name="arrow-back" size={24} color="white" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Kết quả chẩn đoán</Text>
           <View style={{ width: 40 }} />
@@ -117,19 +120,6 @@ export default function ResultScreen() {
             <Text style={styles.sectionTitle}>Triệu chứng</Text>
             <Text style={styles.sectionContent}>{mockDiagnosis.symptoms}</Text>
           </View>
-
-          {/* <View style={styles.recommendedMeds}>
-            <Text style={styles.sectionTitle}>Thuốc khuyến nghị</Text>
-            {mockDiagnosis.recommendations.slice(0, 3).map((med) => (
-              <View key={med.id} style={styles.medicineItem}>
-                <Ionicons name="medical" size={20} color="#2A9D8F" />
-                <View style={styles.medicineInfo}>
-                  <Text style={styles.medicineName}>{med.name}</Text>
-                  <Text style={styles.medicineDesc}>{med.description}</Text>
-                </View>
-              </View>
-            ))}
-          </View> */}
         </View>
 
         <View style={styles.actionButtons}>
@@ -225,31 +215,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22,
     color: "#555",
-  },
-  recommendedMeds: {
-    marginTop: 10,
-  },
-  medicineItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F8F9FA",
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 10,
-  },
-  medicineInfo: {
-    marginLeft: 15,
-    flex: 1,
-  },
-  medicineName: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#2D3142",
-    marginBottom: 4,
-  },
-  medicineDesc: {
-    fontSize: 13,
-    color: "#666",
   },
   actionButtons: {
     flexDirection: "row",
