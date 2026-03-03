@@ -153,7 +153,7 @@ export default function CameraScreen() {
                 <View style={[styles.corner, styles.bottomRight]} />
               </View>
               <Text style={styles.hintText}>
-                Căn chỉnh vật thể vào giữa khung hình
+                Căn chỉnh lá cây vào giữa khung hình
               </Text>
             </View>
           </CameraView>

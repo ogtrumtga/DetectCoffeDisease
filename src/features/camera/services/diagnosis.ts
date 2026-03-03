@@ -1,6 +1,30 @@
 // 1. Import thư viện lưu trữ cho Mobile (thay cho localStorage của Web)
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// 1. POST   /api/camera/analyze
+//    → Gửi ảnh lên server để AI phân tích
+//    Body: FormData (image file)
+//    Response: Diagnosis result
+
+// 2. GET    /api/diagnosis/:id
+//    → Lấy chi tiết một kết quả chẩn đoán
+
+// 3. GET    /api/history
+//    → Lấy toàn bộ lịch sử chẩn đoán
+
+// 4. POST   /api/history
+//    → Lưu kết quả chẩn đoán vào lịch sử
+
+// 5. DELETE /api/history/:id
+//    → Xóa một bản ghi lịch sử
+
+// 6. DELETE /api/history
+//    → Xóa toàn bộ lịch sử
+
+// 7. GET    /api/medicines/:diseaseId
+//    → Lấy danh sách thuốc theo bệnh
+
+
 // GIỮ NGUYÊN: Dữ liệu mẫu của bạn
 export const mockDiagnoses = [
     {
@@ -78,3 +102,6 @@ export const saveToHistory = async (diagnosis: any) => {
         return { success: false, message: 'Không thể lưu lịch sử' };
     }
 };
+
+
+//API Camera
