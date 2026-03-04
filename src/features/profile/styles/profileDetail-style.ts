@@ -1,0 +1,111 @@
+// src/features/profile/styles/profileDetail-style.ts
+import { Dimensions, StyleSheet } from "react-native";
+
+const { width } = Dimensions.get("window");
+
+export const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#FFF" },
+  blackHeader: {
+    height: 180,
+    backgroundColor: "#000",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingTop: 50,
+    paddingHorizontal: 25,
+  },
+  moreIconContainer: { zIndex: 101 },
+  overlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 100,
+  },
+  menuBox: {
+    position: "absolute",
+    top: 55,
+    right: 55,
+    backgroundColor: "#FFF",
+    borderRadius: 4,
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 10,
+  },
+  menuItem: {
+    fontSize: 13,
+    color: "#FF8A8A",
+    fontWeight: "500",
+  },
+  avatarContainer: {
+    alignItems: "center",
+    marginTop: -55,
+    zIndex: 10,
+  },
+  avatarBox: {
+    width: 100,
+    height: 110,
+    backgroundColor: "#E1F1E7",
+    borderRadius: 18,
+    borderWidth: 4,
+    borderColor: "#FFF",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  scrollContent: {
+    paddingHorizontal: 35,
+    paddingTop: 20,
+    paddingBottom: 50,
+  },
+  sectionTitle: {
+    fontSize: 19,
+    fontWeight: "700",
+    color: "#4C57A1",
+    marginTop: 25,
+    marginBottom: 10,
+  },
+  inputField: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#F2F2F2",
+    marginBottom: 20,
+    paddingBottom: 5,
+  },
+  rightLabel: {
+    fontSize: 11,
+    color: "#C0C0C0",
+    textAlign: "right",
+    marginBottom: 2,
+  },
+  textInput: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#222",
+  },
+  bioInput: { lineHeight: 22 },
+  counterText: {
+    fontSize: 11,
+    color: "#D0D0D0",
+    textAlign: "right",
+    marginTop: 5,
+  },
+  logoutBtn: { paddingVertical: 10 },
+  logoutText: { fontSize: 15, color: "#D0D0D0" },
+  footer: { marginTop: 50, alignItems: "center" },
+  saveBtn: {
+    backgroundColor: "#B6E2C6",
+    width: width * 0.75,
+    paddingVertical: 15,
+    borderRadius: 35,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 55,
+  },
+  saveBtnText: {
+    color: "#FFF",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+});

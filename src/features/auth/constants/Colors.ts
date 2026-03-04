@@ -1,3 +1,4 @@
+// src/features/auth/constants/Colors.ts
 export const Colors = {
     primary: '#9DE0AD',      // Màu xanh Mint (nút Đăng nhập/Đăng ký)
     headerBg: '#F9FBF9',     // Màu nền Header (Xanh rất nhạt)

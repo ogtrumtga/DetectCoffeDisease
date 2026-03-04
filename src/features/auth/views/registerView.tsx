@@ -1,4 +1,4 @@
-// src/features/auth/views/loginView.tsx
+// src/features/auth/views/registerView.tsx
 import React from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { Mail, Eye, EyeOff, ChevronLeft } from 'lucide-react-native';
@@ -13,8 +13,8 @@ export default function RegisterScreen() {
     const router = useRouter();
     const {
         form, setForm,
-        errors,
-        clearAllErrors, // <--- Lấy hàm mới
+        errors, emailHint,
+        clearAllErrors,
         showPass, setShowPass,
         showConfirm, setShowConfirm,
         rememberPassword, setRememberPassword,
@@ -30,27 +30,28 @@ export default function RegisterScreen() {
                 <Text style={styles.headerTitle}>Đăng ký</Text>
             </View>
 
-            <ScrollView contentContainerStyle={styles.body}>
-
+            <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
                 {/* Email */}
                 <Text style={styles.label}>Email</Text>
-                <View style={[styles.inputContainer, errors.email && styles.inputError]}>
+                <View style={[styles.inputContainer, errors.email && { borderColor: Colors.alertBorder }]}>
                     <TextInput
                         style={styles.input}
+                        placeholder=""
+                        value={form.email}
                         onChangeText={(t) => setForm({ ...form, email: t })}
-                        // --- SỬA Ở ĐÂY ---
                         onFocus={clearAllErrors}
+                        autoCapitalize="none"
                     />
                     <Mail size={24} color="black" style={styles.iconRight} />
                 </View>
+                {errors.email && <Text style={{ color: Colors.error, fontSize: 12, marginTop: 4 }}>{emailHint}</Text>}
 
                 {/* Mật khẩu */}
                 <Text style={styles.label}>Mật khẩu</Text>
-                <View style={[styles.inputContainer, errors.pass && styles.inputError]}>
+                <View style={[styles.inputContainer, errors.pass && { borderColor: Colors.alertBorder }]}>
                     <TextInput
                         style={styles.input} secureTextEntry={!showPass}
                         onChangeText={(t) => setForm({ ...form, pass: t })}
-                        // --- SỬA Ở ĐÂY ---
                         onFocus={clearAllErrors}
                     />
                     <TouchableOpacity onPress={() => setShowPass(!showPass)}>
@@ -60,19 +61,16 @@ export default function RegisterScreen() {
 
                 {/* Xác nhận mật khẩu */}
                 <Text style={styles.label}>Xác nhận mật khẩu</Text>
-                <View style={[styles.inputContainer, errors.confirmPass && styles.inputError]}>
+                <View style={[styles.inputContainer, errors.confirmPass && { borderColor: Colors.alertBorder }]}>
                     <TextInput
                         style={styles.input} secureTextEntry={!showConfirm}
                         onChangeText={(t) => setForm({ ...form, confirmPass: t })}
-                        // --- SỬA Ở ĐÂY ---
                         onFocus={clearAllErrors}
                     />
                     <TouchableOpacity onPress={() => setShowConfirm(!showConfirm)}>
                         {showConfirm ? <EyeOff size={24} color="black" style={styles.iconRight} /> : <Eye size={24} color="black" style={styles.iconRight} />}
                     </TouchableOpacity>
                 </View>
-
-                {/* ... (Các phần còn lại giữ nguyên) ... */}
 
                 <View style={styles.rememberContainer}>
                     <Text style={{ color: Colors.grayText }}>Nhớ mật khẩu</Text>
@@ -95,10 +93,9 @@ export default function RegisterScreen() {
                 <View style={styles.footer}>
                     <Text style={styles.footerText}>Bạn đã có tài khoản ?</Text>
                     <TouchableOpacity onPress={() => router.back()}>
-                        <Text style={styles.linkText}>Đăng nhập</Text>
+                        <Text style={styles.linkText}> Đăng nhập</Text>
                     </TouchableOpacity>
                 </View>
-
             </ScrollView>
         </View>
     );
