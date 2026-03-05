@@ -1,3 +1,4 @@
+// src/features/camera/views/result-screen.tsx
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
@@ -47,11 +48,12 @@ export default function ResultScreen() {
         <View style={styles.resultCard}>
           <View style={styles.resultHeader}>
             <Text style={styles.resultTitle}>Chẩn đoán</Text>
-            <div style={styles.confidenceBadge}>
+            {/* ĐÃ SỬA: Thay div bằng View */}
+            <View style={styles.confidenceBadge}>
               <Text style={styles.confidenceText}>
                 {mockDiagnosis.confidence} chính xác
               </Text>
-            </div>
+            </View>
           </View>
 
           <Text style={styles.diseaseName}>{mockDiagnosis.disease}</Text>

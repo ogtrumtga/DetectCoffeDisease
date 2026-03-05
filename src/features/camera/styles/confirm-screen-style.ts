@@ -55,16 +55,20 @@ export const styles = StyleSheet.create({
   },
   buttons: {
     flexDirection: "row",
-    justifyContent: "space-around",
+    // Chỉnh từ space-around sang space-between để giãn tối đa
+    justifyContent: "space-between",
     width: "100%",
+    // Thêm padding ngang để nút không dính sát mép màn hình
+    paddingHorizontal: 10,
   },
   button: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 25,
+    paddingHorizontal: 20,
     paddingVertical: 15,
     borderRadius: 25,
-    minWidth: 150,
+    // Chỉnh lại minWidth một chút để cân đối
+    minWidth: "46%",
     justifyContent: "center",
   },
   cancelButton: {
@@ -74,7 +78,7 @@ export const styles = StyleSheet.create({
   },
   cancelButtonText: {
     marginLeft: 8,
-    fontSize: 16,
+    fontSize: 15,
     color: "#E76F51",
     fontWeight: "500",
   },
@@ -83,7 +87,7 @@ export const styles = StyleSheet.create({
   },
   confirmButtonText: {
     marginLeft: 8,
-    fontSize: 16,
+    fontSize: 15,
     color: "white",
     fontWeight: "500",
   },

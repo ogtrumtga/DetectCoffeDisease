@@ -23,7 +23,14 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "edgeToEdgeEnabled": true,
+      "edgeToEdgeEnabled": false,
+      "androidStatusBar": {
+        "hidden": true
+      },
+      "androidNavigationBar": {
+        "visible": false,
+        "sticky": true
+      },
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "CAMERA",

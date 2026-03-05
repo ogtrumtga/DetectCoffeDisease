@@ -71,7 +71,7 @@ export const useLogin = () => {
       setLoading(true);
       await new Promise((r) => setTimeout(r, 700));
 
-      if (email === "chataococup.6cai" && password === "123456") {
+      if (email === "chataococup@6cai.com" && password === "123456") {
         await showCrossPlatformAlert(
           AUTH_MESSAGES.loginSuccess.title,
           AUTH_MESSAGES.loginSuccess.body,

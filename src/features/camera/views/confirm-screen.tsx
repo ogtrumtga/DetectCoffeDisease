@@ -1,3 +1,4 @@
+// src/features/camera/views/confirm-screen.tsx
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
@@ -55,7 +56,7 @@ export default function ConfirmScreen() {
                 style={[styles.button, styles.cancelButton]}
                 onPress={cancelAnalysis}
               >
-                <Ionicons name="close-circle" size={24} color="#E76F51" />
+                {/* <Ionicons name="close-circle" size={24} color="#E76F51" /> */}
                 <Text style={styles.cancelButtonText}>Hủy</Text>
               </TouchableOpacity>
 
@@ -63,7 +64,7 @@ export default function ConfirmScreen() {
                 style={[styles.button, styles.confirmButton]}
                 onPress={startAnalysis}
               >
-                <Ionicons name="play-circle" size={24} color="white" />
+                {/* <Ionicons name="play-circle" size={24} color="white" /> */}
                 <Text style={styles.confirmButtonText}>Phân tích ngay</Text>
               </TouchableOpacity>
             </View>

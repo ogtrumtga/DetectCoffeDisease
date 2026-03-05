@@ -1,6 +1,28 @@
-// app/index.tsx
-import { Redirect } from 'expo-router';
+import { Redirect } from "expo-router";
+import { ActivityIndicator, View } from "react-native";
+import { useAuth } from "../context/AuthContext";
 
 export default function Index() {
-    return <Redirect href ="/(tabs)/camera/cameraIndex" />;
+  const { isLoggedIn, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: "#FFF",
+        }}
+      >
+        <ActivityIndicator size="large" color="#2A9D8F" />
+      </View>
+    );
+  }
+
+  if (isLoggedIn) {
+    return <Redirect href={"/(tabs)/camera/cameraIndex" as any} />;
+  }
+
+  return <Redirect href={"/auth" as any} />;
 }
