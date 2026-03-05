@@ -1,7 +1,7 @@
+// src/features/auth/views/registerView.tsx
 import { useRouter } from "expo-router";
 import { ChevronLeft, Eye, EyeOff, Mail } from "lucide-react-native";
 import React from "react";
-// ĐÃ SỬA: Thêm KeyboardAvoidingView và Platform vào danh sách import
 import {
     Image,
     KeyboardAvoidingView,
@@ -25,6 +25,7 @@ export default function RegisterScreen() {
     form,
     setForm,
     errors,
+    emailHint, // Lấy từ ViewModel
     clearAllErrors,
     showPass,
     setShowPass,
@@ -60,11 +61,20 @@ export default function RegisterScreen() {
           >
             <TextInput
               style={styles.input}
+              placeholder="user@gmail.com"
+              value={form.email}
               onChangeText={(t) => setForm({ ...form, email: t })}
               onFocus={clearAllErrors}
+              autoCapitalize="none"
             />
             <Mail size={24} color="black" style={styles.iconRight} />
           </View>
+          {/* HIỂN THỊ LỖI EMAIL */}
+          {errors.email && (
+            <Text style={{ color: "red", fontSize: 12, marginBottom: 10 }}>
+              {emailHint}
+            </Text>
+          )}
 
           {/* Mật khẩu */}
           <Text style={styles.label}>Mật khẩu</Text>
@@ -73,7 +83,9 @@ export default function RegisterScreen() {
           >
             <TextInput
               style={styles.input}
+              placeholder="Mật khẩu"
               secureTextEntry={!showPass}
+              value={form.pass}
               onChangeText={(t) => setForm({ ...form, pass: t })}
               onFocus={clearAllErrors}
             />
@@ -85,6 +97,11 @@ export default function RegisterScreen() {
               )}
             </TouchableOpacity>
           </View>
+          {errors.pass && (
+            <Text style={{ color: "red", fontSize: 12, marginBottom: 10 }}>
+              Vui lòng nhập mật khẩu
+            </Text>
+          )}
 
           {/* Xác nhận mật khẩu */}
           <Text style={styles.label}>Xác nhận mật khẩu</Text>
@@ -96,7 +113,9 @@ export default function RegisterScreen() {
           >
             <TextInput
               style={styles.input}
+              placeholder="Xác nhận lại mật khẩu"
               secureTextEntry={!showConfirm}
+              value={form.confirmPass}
               onChangeText={(t) => setForm({ ...form, confirmPass: t })}
               onFocus={clearAllErrors}
             />
@@ -108,6 +127,11 @@ export default function RegisterScreen() {
               )}
             </TouchableOpacity>
           </View>
+          {errors.confirmPass && (
+            <Text style={{ color: "red", fontSize: 12, marginBottom: 10 }}>
+              Mật khẩu xác nhận không khớp
+            </Text>
+          )}
 
           <View style={styles.rememberContainer}>
             <Text style={{ color: Colors.grayText }}>Nhớ mật khẩu</Text>

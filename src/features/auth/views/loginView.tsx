@@ -11,7 +11,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import { authStyles as styles } from "../styles/auth.styles";
 import { useLogin } from "../viewmodels/useLogin";
@@ -34,6 +34,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginViewProps) {
     showPass,
     setShowPass,
     errors,
+    emailHint, // Cần lấy thêm hint
     errorMessage,
     loading,
     clearAllErrors,
@@ -63,82 +64,99 @@ export default function LoginScreen({ onLoginSuccess }: LoginViewProps) {
           contentContainerStyle={styles.body}
           keyboardShouldPersistTaps="handled"
         >
-        {/* EMAIL */}
-        <Text style={styles.label}>Email</Text>
-        <View
-          style={[styles.inputContainer, errors.email && styles.inputError]}
-        >
-          <TextInput
-            style={styles.input}
-            value={email}
-            placeholder="Email"
-            onChangeText={setEmail}
-            onFocus={clearAllErrors}
-            autoCapitalize="none"
-          />
-          <Mail size={24} color="black" style={styles.iconRight} />
-        </View>
+          {/* EMAIL */}
+          <Text style={styles.label}>Email</Text>
+          <View
+            style={[styles.inputContainer, errors.email && styles.inputError]}
+          >
+            <TextInput
+              style={styles.input}
+              value={email}
+              placeholder="Email"
+              onChangeText={setEmail}
+              onFocus={clearAllErrors}
+              autoCapitalize="none"
+            />
+            <Mail size={24} color="black" style={styles.iconRight} />
+          </View>
+          {errors.email && (
+            <Text style={{ color: "red", fontSize: 12, marginBottom: 5 }}>
+              {emailHint}
+            </Text>
+          )}
 
-        {/* PASSWORD */}
-        <Text style={styles.label}>Mật khẩu</Text>
-        <View
-          style={[styles.inputContainer, errors.password && styles.inputError]}
-        >
-          <TextInput
-            style={styles.input}
-            secureTextEntry={!showPass}
-            value={password}
-            placeholder="Mật khẩu"
-            onChangeText={setPassword}
-            onFocus={clearAllErrors}
-          />
-          <TouchableOpacity onPress={() => setShowPass(!showPass)}>
-            {showPass ? (
-              <EyeOff size={24} color="black" style={styles.iconRight} />
+          {/* PASSWORD */}
+          <Text style={styles.label}>Mật khẩu</Text>
+          <View
+            style={[
+              styles.inputContainer,
+              errors.password && styles.inputError,
+            ]}
+          >
+            <TextInput
+              style={styles.input}
+              secureTextEntry={!showPass}
+              value={password}
+              placeholder="Mật khẩu"
+              onChangeText={setPassword}
+              onFocus={clearAllErrors}
+            />
+            <TouchableOpacity onPress={() => setShowPass(!showPass)}>
+              {showPass ? (
+                <EyeOff size={24} color="black" style={styles.iconRight} />
+              ) : (
+                <Eye size={24} color="black" style={styles.iconRight} />
+              )}
+            </TouchableOpacity>
+          </View>
+          {errors.password && (
+            <Text style={{ color: "red", fontSize: 12, marginBottom: 5 }}>
+              Vui lòng nhập mật khẩu
+            </Text>
+          )}
+
+          <TouchableOpacity style={styles.forgotPass}>
+            <Text style={styles.forgotPassText}>Quên mật khẩu ?</Text>
+          </TouchableOpacity>
+
+          {/* HIỂN THỊ LỖI TỔNG QUÁT (Sai tài khoản/mật khẩu) */}
+          {!!errorMessage && (
+            <View style={[styles.errorBox, { marginBottom: 15 }]}>
+              <Text style={styles.errorText}>{errorMessage}</Text>
+            </View>
+          )}
+
+          {/* LOGIN BUTTON */}
+          <TouchableOpacity
+            style={[styles.btnMain, loading && { opacity: 0.6 }]}
+            onPress={handleLogin}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="white" />
             ) : (
-              <Eye size={24} color="black" style={styles.iconRight} />
+              <Text style={styles.btnText}>Đăng nhập</Text>
             )}
           </TouchableOpacity>
-        </View>
 
-        <TouchableOpacity style={styles.forgotPass}>
-          <Text style={styles.forgotPassText}>Quên mật khẩu ?</Text>
-        </TouchableOpacity>
+          {/* GOOGLE */}
+          <TouchableOpacity style={styles.btnGoogle}>
+            <Image
+              source={{ uri: GOOGLE_LOGO_URI }}
+              style={styles.googleLogo}
+            />
+            <Text style={styles.googleText}>Đăng nhập bằng Google</Text>
+          </TouchableOpacity>
 
-        {/* LOGIN BUTTON */}
-        <TouchableOpacity
-          style={[styles.btnMain, loading && { opacity: 0.6 }]}
-          onPress={handleLogin}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <Text style={styles.btnText}>Đăng nhập</Text>
-          )}
-        </TouchableOpacity>
-
-        {/* GOOGLE */}
-        <TouchableOpacity style={styles.btnGoogle}>
-          <Image source={{ uri: GOOGLE_LOGO_URI }} style={styles.googleLogo} />
-          <Text style={styles.googleText}>Đăng nhập bằng Google</Text>
-        </TouchableOpacity>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Bạn chưa có tài khoản ?</Text>
-          <Link href="/auth/register" asChild>
-            <TouchableOpacity>
-              <Text style={styles.linkText}>Đăng ký</Text>
-            </TouchableOpacity>
-          </Link>
-        </View>
-
-        {!!errorMessage && (
-          <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{errorMessage}</Text>
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Bạn chưa có tài khoản ?</Text>
+            <Link href="/auth/register" asChild>
+              <TouchableOpacity>
+                <Text style={styles.linkText}>Đăng ký</Text>
+              </TouchableOpacity>
+            </Link>
           </View>
-        )}
-      </ScrollView>
+        </ScrollView>
       </KeyboardAvoidingView>
     </View>
   );

@@ -34,7 +34,7 @@ export const useRegister = () => {
     if (!parts[1].includes("."))
       return "Tên miền phải có dấu chấm (Ví dụ: gmail.com)";
 
-    return ""; // Hợp lệ
+    return ""; 
   };
 
   const clearAllErrors = () => {
