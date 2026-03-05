@@ -3,15 +3,17 @@
  * Màn hình chi tiết post với comments
  */
 
-import React, { useEffect, useRef } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
-import { TouchableOpacity } from 'react-native';
 import { SafeArea } from '@/components/SafeArea';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { usePostDetailVM } from '../viewmodels';
+import { router, useLocalSearchParams } from 'expo-router';
+import React from 'react';
+import { KeyboardAvoidingView, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { CommentInput, CommentList } from '../components';
 import { CommunityColors } from '../design-system';
-import { CommentList, CommentInput } from '../components';
+import { usePostDetailVM } from '../viewmodels';
+
+// TODO: Lấy từ AuthContext khi có user authentication
+const CURRENT_USER_ID = 'user-1';
 
 export default function PostDetailScreen() {
   const params = useLocalSearchParams();
@@ -102,7 +104,11 @@ export default function PostDetailScreen() {
     <SafeArea style={styles.container}>
       <PostDetailHeader />
       
-      <View style={styles.content}>
+      <KeyboardAvoidingView
+        style={styles.content}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+      >
         <CommentList
           post={post}
           comments={comments}
@@ -118,6 +124,7 @@ export default function PostDetailScreen() {
           onImagePress={handleImagePress}
           targetCommentId={targetCommentId}
           shouldHighlight={shouldHighlight}
+          currentUserId={CURRENT_USER_ID}
         />
 
         <CommentInput
@@ -126,7 +133,7 @@ export default function PostDetailScreen() {
           replyingTo={replyingTo}
           onCancelReply={handleCancelReply}
         />
-      </View>
+      </KeyboardAvoidingView>
     </SafeArea>
   );
 }

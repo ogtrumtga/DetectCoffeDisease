@@ -36,12 +36,13 @@ export const sprayTimeStyles = StyleSheet.create({
   },
   itemsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    gap: 8,
     marginBottom: 16,
   },
   item: {
     alignItems: 'center',
-    minWidth: 60,
+    minWidth: 50,
+    marginHorizontal: 4,
   },
   iconContainer: {
     width: 32,
@@ -67,6 +68,7 @@ export const sprayTimeStyles = StyleSheet.create({
   hourText: {
     fontSize: 14,
     color: WEATHER_COLORS.TEXT_PRIMARY,
+    textAlign: 'center',
   },
   divider: {
     height: 1,

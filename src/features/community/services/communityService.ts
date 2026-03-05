@@ -9,7 +9,25 @@ import { CommunityPost, CreatePostRequest, PaginatedResponse } from '../models';
 const API_BASE_URL = 'https://your-api-domain.com/api/v1';
 
 // Mock data để test UI
-const mockPosts: CommunityPost[] = [];
+const mockPosts: CommunityPost[] = [
+  {
+    id: 'sample-post-1',
+    title: 'Lá cà phê của tôi bị vàng, làm sao để khắc phục?',
+    content: 'Gần đây tôi thấy lá cà phê của mình bắt đầu chuyển vàng và rụng nhiều. Cây được trồng trong chậu, tưới nước đều đặn mỗi ngày. Có ai biết nguyên nhân và cách khắc phục không ạ? Cảm ơn mọi người!',
+    image: 'https://images.unsplash.com/photo-1447933601403-0c6688de566e?w=800&h=400&fit=crop',
+    author: {
+      id: 'user-sample',
+      name: 'Nguyễn Văn A',
+      avatar: 'https://ui-avatars.com/api/?name=Nguyen+Van+A&background=4CAF50&color=fff'
+    },
+    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 giờ trước
+    updatedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    likes: 5,
+    comments: 3,
+    tags: ['bệnh lá vàng', 'chăm sóc cà phê'],
+    isLiked: false
+  }
+];
 
 export const communityService = {
   // API: GET /community/posts - Lấy danh sách posts với phân trang

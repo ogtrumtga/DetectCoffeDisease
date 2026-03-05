@@ -3,13 +3,17 @@
  * Logic cho màn hình tạo post
  */
 
-import { useState } from 'react';
-import { Alert, ActionSheetIOS, Platform } from 'react-native';
+import { useAuth } from '@/context/AuthContext';
 import * as ImagePicker from 'expo-image-picker';
-import { communityService } from '../services';
+import { router } from 'expo-router';
+import { useState } from 'react';
+import { ActionSheetIOS, Alert, Platform } from 'react-native';
 import { CreatePostRequest } from '../models';
+import { communityService } from '../services';
 
 export const useCreatePostVM = () => {
+  const { isLoggedIn } = useAuth();
+  
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -99,6 +103,19 @@ export const useCreatePostVM = () => {
   };
 
   const handleSubmit = async (): Promise<boolean> => {
+    // Authentication guard - block guests from creating posts
+    if (!isLoggedIn) {
+      Alert.alert(
+        'Yêu cầu đăng nhập',
+        'Bạn cần đăng nhập để thực hiện hành động này',
+        [
+          { text: 'Hủy', style: 'cancel' },
+          { text: 'Đăng nhập', onPress: () => router.push('/auth/login') }
+        ]
+      );
+      return false;
+    }
+
     const validationError = validateForm();
     if (validationError) {
       Alert.alert('Lỗi', validationError);

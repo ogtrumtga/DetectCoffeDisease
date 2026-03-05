@@ -5,19 +5,19 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  FlatList,
-  RefreshControl,
-  Text,
-  View
+    ActivityIndicator,
+    FlatList,
+    RefreshControl,
+    Text,
+    View
 } from 'react-native';
+import { CommunityColors } from '../design-system';
 import { Comment, CommunityPost } from '../models';
 import { commentStyles } from '../styles';
-import { CommunityColors } from '../design-system';
 import { CommentItem } from './CommentItem';
+import { PostActions } from './PostActions';
 import { PostContent } from './PostContent';
 import { PostHeader } from './PostHeader';
-import { PostActions } from './PostActions';
 
 interface CommentListProps {
   post: CommunityPost;
@@ -30,10 +30,10 @@ interface CommentListProps {
   onReplyComment?: (comment: Comment) => void;
   onLike: () => void;
   onComment: () => void;
-  onShare: () => void;
   onImagePress?: (imageUrl: string) => void;
   targetCommentId?: string;
   shouldHighlight?: boolean;
+  currentUserId?: string; // ID của user hiện tại
 }
 
 export function CommentList({
@@ -47,10 +47,10 @@ export function CommentList({
   onReplyComment,
   onLike,
   onComment,
-  onShare,
   onImagePress,
   targetCommentId,
-  shouldHighlight
+  shouldHighlight,
+  currentUserId
 }: CommentListProps) {
   const flatListRef = useRef<FlatList>(null);
   const [highlightedCommentId, setHighlightedCommentId] = useState<string | null>(null);
@@ -126,6 +126,8 @@ export function CommentList({
       onLike={onLikeComment}
       onReply={onReplyComment}
       highlightedCommentId={highlightedCommentId}
+      currentUserId={currentUserId}
+      postId={post.id}
     />
   );
 
@@ -155,7 +157,6 @@ export function CommentList({
         isDetailView={true}
         onLike={onLike}
         onComment={onComment}
-        onShare={onShare}
       />
     </View>
   );

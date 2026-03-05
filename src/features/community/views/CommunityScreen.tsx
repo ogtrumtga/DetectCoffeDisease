@@ -4,9 +4,11 @@
  */
 // src/features/community/views/CommunityScreen.tsx
 import { SafeArea } from "@/components/SafeArea";
+import { useAuth } from "@/context/AuthContext";
 import { router, useLocalSearchParams } from "expo-router";
 import React from "react";
 import { Alert, Share, View } from "react-native";
+import { savePendingAction } from "../../../utils/pendingAction";
 import {
     CommunityFeed,
     CommunityHeader,
@@ -18,6 +20,7 @@ import { useCommunityVM } from "../viewmodels";
 
 export default function CommunityHome() {
   const params = useLocalSearchParams();
+  const { isLoggedIn } = useAuth();
 
   const {
     posts,
@@ -91,11 +94,49 @@ export default function CommunityHome() {
     }
   };
 
-  const handleCreatePost = () => {
+  const handleCreatePost = async () => {
+    // Authentication guard - block guests from creating posts
+    if (!isLoggedIn) {
+      // Lưu pending action trước khi chuyển đến login
+      await savePendingAction({
+        action: 'create-post',
+        returnPath: '/(tabs)/community/create-post',
+      });
+      
+      Alert.alert(
+        'Yêu cầu đăng nhập',
+        'Bạn cần đăng nhập để thực hiện hành động này',
+        [
+          { text: 'Hủy', style: 'cancel' },
+          { text: 'Đăng nhập', onPress: () => router.push('/auth/login') }
+        ]
+      );
+      return;
+    }
+
     router.push("/(tabs)/community/create-post");
   };
 
-  const handleNotificationPress = () => {
+  const handleNotificationPress = async () => {
+    // Authentication guard - block guests from accessing notifications
+    if (!isLoggedIn) {
+      // Lưu pending action trước khi chuyển đến login
+      await savePendingAction({
+        action: 'notification',
+        returnPath: '/(tabs)/community/notification-modal',
+      });
+      
+      Alert.alert(
+        'Yêu cầu đăng nhập',
+        'Bạn cần đăng nhập để thực hiện hành động này',
+        [
+          { text: 'Hủy', style: 'cancel' },
+          { text: 'Đăng nhập', onPress: () => router.push('/auth/login') }
+        ]
+      );
+      return;
+    }
+
     router.push("/(tabs)/community/notification-modal");
   };
 

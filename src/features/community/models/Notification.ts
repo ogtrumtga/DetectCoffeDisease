@@ -7,7 +7,7 @@ import { User } from './User';
 
 export interface Notification {
   id: string;
-  type: 'like' | 'comment' | 'reply' | 'mention' | 'follow';
+  type: 'like' | 'comment' | 'reply' | 'mention' | 'follow' | 'report';
   title: string;
   message: string;
   user?: User; // Người thực hiện hành động
@@ -15,5 +15,5 @@ export interface Notification {
   commentId?: string; // ID comment liên quan
   createdAt: string;
   isRead: boolean;
-  data?: Record<string, any>; // Dữ liệu bổ sung
+  data?: Record<string, any>; // Dữ liệu bổ sung (ví dụ: reportedUser, reportReason)
 }

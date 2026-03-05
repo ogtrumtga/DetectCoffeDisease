@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import React, { useState } from 'react';
+import { Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { WEATHER_COLORS } from '../constants';
 import { SprayCondition } from '../models';
 import { sprayTimeStyles } from '../styles';
-import { WEATHER_COLORS } from '../constants';
 import { formatHour } from '../utils';
 import { ExplainSprayRuleScreen } from '../views/ExplainSprayRuleScreen';
 
@@ -24,8 +24,34 @@ export function SprayTimePanel({ conditions }: SprayTimePanelProps) {
 
   if (conditions.length === 0) return null;
 
-  const hasGood = conditions.some((c) => c.condition === 'GOOD');
-  const hasOk = conditions.some((c) => c.condition === 'OK');
+  // Generate 12 consecutive hours starting from current hour
+  const generateTimelineData = () => {
+    if (conditions.length > 0) {
+      const now = new Date();
+      const currentHour = conditions[0]?.hour ?? now.getHours();
+      
+      // Generate 12 consecutive hours
+      return Array.from({ length: 12 }, (_, index) => {
+        const targetHour = (currentHour + index) % 24;
+        const matchingCondition = conditions.find(c => c.hour === targetHour);
+        
+        return matchingCondition || {
+          hour: targetHour,
+          condition: 'BAD' as const,
+          temperature: 0,
+          humidity: 0,
+          windSpeed: 0,
+          precipitation: 0,
+          deltaT: 0,
+        };
+      });
+    }
+    return conditions.slice(0, 12);
+  };
+
+  const timelineConditions = generateTimelineData();
+  const hasGood = timelineConditions.some((c) => c.condition === 'GOOD');
+  const hasOk = timelineConditions.some((c) => c.condition === 'OK');
 
   const getStatusText = () => {
     if (hasGood) return 'Điều kiện phun tối ưu';
@@ -65,18 +91,24 @@ export function SprayTimePanel({ conditions }: SprayTimePanelProps) {
         <View style={sprayTimeStyles.conditionBox}>
           <Text style={sprayTimeStyles.conditionTitle}>{getStatusText()}</Text>
 
-          <View style={sprayTimeStyles.itemsContainer}>
-            {conditions.slice(0, 5).map((item, index) => (
-              <View key={index} style={sprayTimeStyles.item}>
-                <View style={[sprayTimeStyles.iconContainer, getIconStyle(item.condition)]}>
-                  {getIconEmoji(item.condition)}
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 8 }}
+          >
+            <View style={sprayTimeStyles.itemsContainer}>
+              {timelineConditions.map((item, index) => (
+                <View key={index} style={sprayTimeStyles.item}>
+                  <View style={[sprayTimeStyles.iconContainer, getIconStyle(item.condition)]}>
+                    {getIconEmoji(item.condition)}
+                  </View>
+                  <Text style={sprayTimeStyles.hourText}>
+                    {index === 0 ? 'Hiện\ntại' : formatHour(item.hour)}
+                  </Text>
                 </View>
-                <Text style={sprayTimeStyles.hourText}>
-                  {index === 0 ? 'Hiện tại' : formatHour(item.hour)}
-                </Text>
-              </View>
-            ))}
-          </View>
+              ))}
+            </View>
+          </ScrollView>
 
           <View style={sprayTimeStyles.divider} />
 

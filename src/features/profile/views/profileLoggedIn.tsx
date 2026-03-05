@@ -3,12 +3,12 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Stack, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Swipeable from "react-native-gesture-handler/Swipeable";
@@ -116,7 +116,7 @@ export default function ProfileHomeScreen() {
         <Text style={styles.postTitle}>{String(item.title)}</Text>
         <Text style={styles.postDescription}>{String(item.description)}</Text>
 
-        {/* Phần Footer chứa các icon đã sửa giống ảnh 100% */}
+        {/* Phần Footer chứa các icon */}
         <View style={styles.postFooter}>
           <View style={styles.interactionGroup}>
             <TouchableOpacity style={styles.iconBtn}>
@@ -138,13 +138,6 @@ export default function ProfileHomeScreen() {
               </Text>
             </TouchableOpacity>
           </View>
-          <TouchableOpacity>
-            <MaterialCommunityIcons
-              name="share-variant"
-              size={22}
-              color="#728096"
-            />
-          </TouchableOpacity>
         </View>
       </View>
     </View>

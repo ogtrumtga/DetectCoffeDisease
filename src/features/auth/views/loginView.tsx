@@ -5,11 +5,13 @@ import React from "react";
 import {
   ActivityIndicator,
   Image,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import { authStyles as styles } from "../styles/auth.styles";
 import { useLogin } from "../viewmodels/useLogin";
@@ -52,10 +54,15 @@ export default function LoginScreen({ onLoginSuccess }: LoginViewProps) {
         <Text style={styles.headerTitle}>Đăng nhập</Text>
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.body}
-        keyboardShouldPersistTaps="handled"
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
+        <ScrollView
+          contentContainerStyle={styles.body}
+          keyboardShouldPersistTaps="handled"
+        >
         {/* EMAIL */}
         <Text style={styles.label}>Email</Text>
         <View
@@ -132,6 +139,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginViewProps) {
           </View>
         )}
       </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }

@@ -1,11 +1,10 @@
-// src/features/auth/views/loginView.tsx
-import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Image } from 'react-native';
-import { Mail, Eye, EyeOff, ChevronLeft } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { ChevronLeft, Eye, EyeOff, Mail } from 'lucide-react-native';
+import React from 'react';
+import { Image, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Colors } from '../constants/Colors';
 import { authStyles as styles } from '../styles/auth.styles';
 import { useRegister } from '../viewmodels/useRegister';
-import { Colors } from '../constants/Colors';
 
 const GOOGLE_LOGO_URI = "https://cdn-icons-png.flaticon.com/512/2991/2991148.png";
 
@@ -30,7 +29,12 @@ export default function RegisterScreen() {
                 <Text style={styles.headerTitle}>Đăng ký</Text>
             </View>
 
-            <ScrollView contentContainerStyle={styles.body}>
+            <KeyboardAvoidingView
+                style={{ flex: 1 }}
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+            >
+                <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
 
                 {/* Email */}
                 <Text style={styles.label}>Email</Text>
@@ -100,6 +104,7 @@ export default function RegisterScreen() {
                 </View>
 
             </ScrollView>
+            </KeyboardAvoidingView>
         </View>
     );
 }

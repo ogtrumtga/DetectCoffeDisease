@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { Text, View } from 'react-native';
 import { WeatherCurrent, WeatherDaily } from '../models';
 import { forecastStyles } from '../styles';
 import { getWeatherIcon } from '../utils';

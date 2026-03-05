@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { DeltaTHumidityChart } from '../components/DeltaTHumidityChart';
 import { SprayCondition } from '../models';
-import { formatHour } from '../utils';
 
 interface ExplainSprayRuleScreenProps {
   onClose?: () => void;
@@ -27,29 +26,45 @@ export function ExplainSprayRuleScreen({ onClose, conditions = [] }: ExplainSpra
     console.log('generateTimelineData - checking conditions:', conditions);
     
     if (conditions && conditions.length > 0) {
-      // Use real data from weather API
+      // Use real data from weather API - show 12 consecutive hours
       console.log('Using REAL data from conditions');
-      const result = conditions.slice(0, 5).map((item, index) => ({
-        label: index === 0 ? 'Hiện\ntại' : formatHour(item.hour),
-        hour: item.hour,
-        status: item.condition.toLowerCase(),
-      }));
+      
+      // Get current hour from first condition or current time
+      const now = new Date();
+      const currentHour = conditions[0]?.hour ?? now.getHours();
+      
+      // Generate 12 consecutive hours starting from current hour
+      const result = Array.from({ length: 12 }, (_, index) => {
+        const targetHour = (currentHour + index) % 24;
+        
+        // Find matching condition for this hour
+        const matchingCondition = conditions.find(c => c.hour === targetHour);
+        
+        return {
+          label: index === 0 ? 'Hiện\ntại' : `${targetHour}h`,
+          hour: targetHour,
+          status: matchingCondition ? matchingCondition.condition.toLowerCase() : 'bad',
+        };
+      });
+      
       console.log('Timeline data (real):', result);
       return result;
     }
     
-    // Fallback to sample data if no real data available
+    // Fallback to sample data if no real data available - show 12 hours
     console.log('Using FALLBACK sample data');
     const now = new Date();
     const currentHour = now.getHours();
     
-    return [
-      { label: 'Hiện\ntại', hour: currentHour, status: 'ok' },
-      { label: `${(currentHour + 1) % 24}h`, hour: (currentHour + 1) % 24, status: 'good' },
-      { label: `${(currentHour + 2) % 24}h`, hour: (currentHour + 2) % 24, status: 'ok' },
-      { label: `${(currentHour + 3) % 24}h`, hour: (currentHour + 3) % 24, status: 'bad' },
-      { label: `${(currentHour + 4) % 24}h`, hour: (currentHour + 4) % 24, status: 'bad' },
-    ];
+    // Generate 12 time slots (current + next 11 hours)
+    return Array.from({ length: 12 }, (_, index) => {
+      const hour = (currentHour + index) % 24;
+      return {
+        label: index === 0 ? 'Hiện\ntại' : `${hour}h`,
+        hour: hour,
+        status: index < 3 ? 'good' : index < 6 ? 'ok' : 'bad', // Sample pattern
+      };
+    });
   };
 
   const timelineData = generateTimelineData();

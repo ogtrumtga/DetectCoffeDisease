@@ -3,8 +3,9 @@
  * Màn hình tạo post mới
  */
 // src/features/community/views/CreatePostScreen.tsx
+import { useAuth } from "@/context/AuthContext";
 import { router } from "expo-router";
-import React from "react";
+import React, { useEffect } from "react";
 import {
     Alert,
     Keyboard,
@@ -19,6 +20,7 @@ import {
 } from "react-native";
 import { SafeArea } from "../../../../components/SafeArea";
 import { IconSymbol } from "../../../../components/ui/icon-symbol";
+import { clearPendingAction } from "../../../utils/pendingAction";
 import { ImagePickerBox } from "../components";
 import { VALIDATION_RULES } from "../constants";
 import { CommunityColors } from "../design-system";
@@ -26,6 +28,8 @@ import { createPostStyles } from "../styles";
 import { useCreatePostVM } from "../viewmodels";
 
 export default function CreatePostScreen() {
+  const { isLoggedIn } = useAuth();
+  
   const {
     title,
     description,
@@ -39,6 +43,37 @@ export default function CreatePostScreen() {
     handleSubmit,
   } = useCreatePostVM();
 
+  // Auth guard - redirect if not logged in
+  useEffect(() => {
+    if (!isLoggedIn) {
+      Alert.alert(
+        'Yêu cầu đăng nhập',
+        'Bạn cần đăng nhập để tạo bài viết',
+        [
+          {
+            text: 'OK',
+            onPress: () => router.replace('/(tabs)/community/communityIndex')
+          }
+        ]
+      );
+    }
+  }, [isLoggedIn]);
+
+  // Xóa pending action khi màn hình mount
+  // Đảm bảo không bị redirect lại khi quay về tab Community
+  useEffect(() => {
+    const cleanup = async () => {
+      await clearPendingAction();
+      console.log('Cleared pending action on CreatePostScreen mount');
+    };
+    cleanup();
+  }, []);
+
+  // Không render nếu chưa đăng nhập
+  if (!isLoggedIn) {
+    return null;
+  }
+
   const onSubmit = async () => {
     const success = await handleSubmit();
     if (success) {
@@ -46,9 +81,13 @@ export default function CreatePostScreen() {
         {
           text: "OK",
           onPress: () => {
-            router.back();
+            // Chuyển về màn hình chính của tab Cộng đồng
+            // Dùng navigate với screen name cụ thể
+            router.replace("/(tabs)/community/communityIndex");
             // Trigger refresh ở community screen
-            router.setParams({ refresh: Date.now().toString() });
+            setTimeout(() => {
+              router.setParams({ refresh: Date.now().toString() });
+            }, 100);
           },
         },
       ]);
@@ -60,7 +99,10 @@ export default function CreatePostScreen() {
       {/* Header */}
       <View style={createPostStyles.header}>
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={() => {
+            // Quay về màn hình chính của tab Cộng đồng
+            router.replace("/(tabs)/community/communityIndex");
+          }}
           style={createPostStyles.closeButton}
         >
           <IconSymbol

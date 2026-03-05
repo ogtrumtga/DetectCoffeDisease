@@ -3,8 +3,8 @@
  * API calls cho notifications
  */
 
-import { Notification, PaginatedResponse } from '../models';
 import { notificationEmitter } from '../contexts/NotificationContext';
+import { Notification, PaginatedResponse } from '../models';
 
 // Mock data để test UI - bắt đầu với mảng rỗng
 const mockNotifications: Notification[] = [];
@@ -390,5 +390,82 @@ export const notificationService = {
       console.error('Error getting unread count:', error);
       throw error;
     }
+  },
+
+  // API: POST /notifications/report - Tạo notification báo cáo comment
+  /**
+   * @param reporterId - ID user báo cáo
+   * @param reporterName - Tên user báo cáo
+   * @param reportedUserId - ID user bị báo cáo
+   * @param reportedUserName - Tên user bị báo cáo
+   * @param commentId - ID comment bị báo cáo
+   * @param commentContent - Nội dung comment bị báo cáo
+   * @param postId - ID post chứa comment
+   * @param reason - Lý do báo cáo (optional)
+   * @returns Notification
+   */
+  async createReportNotification(
+    reporterId: string,
+    reporterName: string,
+    reportedUserId: string,
+    reportedUserName: string,
+    commentId: string,
+    commentContent: string,
+    postId: string,
+    reason?: string
+  ): Promise<Notification> {
+    // TODO: Backend - Implement API endpoint
+    // const response = await fetch(`${API_BASE_URL}/notifications/report`, {
+    //   method: 'POST',
+    //   headers: {
+    //     'Content-Type': 'application/json',
+    //     'Authorization': `Bearer ${getAuthToken()}`
+    //   },
+    //   body: JSON.stringify({
+    //     reporterId,
+    //     reportedUserId,
+    //     commentId,
+    //     postId,
+    //     reason
+    //   })
+    // });
+    // 
+    // if (!response.ok) {
+    //   throw new Error('Failed to create report notification');
+    // }
+    // 
+    // const result: ApiResponse<Notification> = await response.json();
+    // return result.data;
+
+    // Mock implementation
+    const newNotification: Notification = {
+      id: `notif-${notificationIdCounter++}`,
+      type: 'report',
+      title: 'Báo cáo vi phạm',
+      message: `${reporterName} đã báo cáo bình luận của ${reportedUserName}${reason ? `: ${reason}` : ''}`,
+      user: {
+        id: reporterId,
+        name: reporterName,
+        avatar: 'https://via.placeholder.com/40'
+      },
+      postId,
+      commentId,
+      createdAt: new Date().toISOString(),
+      isRead: false,
+      data: {
+        reportedUserId,
+        reportedUserName,
+        commentContent: commentContent.substring(0, 100),
+        reason
+      }
+    };
+    
+    mockNotifications.unshift(newNotification);
+    console.log('Created report notification:', newNotification);
+    
+    // Emit event để cập nhật badge
+    notificationEmitter.emit('notification-created');
+    
+    return newNotification;
   }
 };
