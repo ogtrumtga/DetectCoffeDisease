@@ -1,11 +1,10 @@
-// src/features/auth/views/registerView.tsx
-import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Image } from 'react-native';
-import { Mail, Eye, EyeOff, ChevronLeft } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { ChevronLeft, Eye, EyeOff, Mail } from 'lucide-react-native';
+import React from 'react';
+import { Image, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Colors } from '../constants/Colors';
 import { authStyles as styles } from '../styles/auth.styles';
 import { useRegister } from '../viewmodels/useRegister';
-import { Colors } from '../constants/Colors';
 
 const GOOGLE_LOGO_URI = "https://cdn-icons-png.flaticon.com/512/2991/2991148.png";
 
@@ -13,8 +12,8 @@ export default function RegisterScreen() {
     const router = useRouter();
     const {
         form, setForm,
-        errors, emailHint,
-        clearAllErrors,
+        errors,
+        clearAllErrors, // <--- Lấy hàm mới
         showPass, setShowPass,
         showConfirm, setShowConfirm,
         rememberPassword, setRememberPassword,
@@ -30,28 +29,32 @@ export default function RegisterScreen() {
                 <Text style={styles.headerTitle}>Đăng ký</Text>
             </View>
 
-            <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+            <KeyboardAvoidingView
+                style={{ flex: 1 }}
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+            >
+                <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+
                 {/* Email */}
                 <Text style={styles.label}>Email</Text>
-                <View style={[styles.inputContainer, errors.email && { borderColor: Colors.alertBorder }]}>
+                <View style={[styles.inputContainer, errors.email && styles.inputError]}>
                     <TextInput
                         style={styles.input}
-                        placeholder=""
-                        value={form.email}
                         onChangeText={(t) => setForm({ ...form, email: t })}
+                        // --- SỬA Ở ĐÂY ---
                         onFocus={clearAllErrors}
-                        autoCapitalize="none"
                     />
                     <Mail size={24} color="black" style={styles.iconRight} />
                 </View>
-                {errors.email && <Text style={{ color: Colors.error, fontSize: 12, marginTop: 4 }}>{emailHint}</Text>}
 
                 {/* Mật khẩu */}
                 <Text style={styles.label}>Mật khẩu</Text>
-                <View style={[styles.inputContainer, errors.pass && { borderColor: Colors.alertBorder }]}>
+                <View style={[styles.inputContainer, errors.pass && styles.inputError]}>
                     <TextInput
                         style={styles.input} secureTextEntry={!showPass}
                         onChangeText={(t) => setForm({ ...form, pass: t })}
+                        // --- SỬA Ở ĐÂY ---
                         onFocus={clearAllErrors}
                     />
                     <TouchableOpacity onPress={() => setShowPass(!showPass)}>
@@ -61,16 +64,19 @@ export default function RegisterScreen() {
 
                 {/* Xác nhận mật khẩu */}
                 <Text style={styles.label}>Xác nhận mật khẩu</Text>
-                <View style={[styles.inputContainer, errors.confirmPass && { borderColor: Colors.alertBorder }]}>
+                <View style={[styles.inputContainer, errors.confirmPass && styles.inputError]}>
                     <TextInput
                         style={styles.input} secureTextEntry={!showConfirm}
                         onChangeText={(t) => setForm({ ...form, confirmPass: t })}
+                        // --- SỬA Ở ĐÂY ---
                         onFocus={clearAllErrors}
                     />
                     <TouchableOpacity onPress={() => setShowConfirm(!showConfirm)}>
                         {showConfirm ? <EyeOff size={24} color="black" style={styles.iconRight} /> : <Eye size={24} color="black" style={styles.iconRight} />}
                     </TouchableOpacity>
                 </View>
+
+                {/* ... (Các phần còn lại giữ nguyên) ... */}
 
                 <View style={styles.rememberContainer}>
                     <Text style={{ color: Colors.grayText }}>Nhớ mật khẩu</Text>
@@ -93,10 +99,12 @@ export default function RegisterScreen() {
                 <View style={styles.footer}>
                     <Text style={styles.footerText}>Bạn đã có tài khoản ?</Text>
                     <TouchableOpacity onPress={() => router.back()}>
-                        <Text style={styles.linkText}> Đăng nhập</Text>
+                        <Text style={styles.linkText}>Đăng nhập</Text>
                     </TouchableOpacity>
                 </View>
+
             </ScrollView>
+            </KeyboardAvoidingView>
         </View>
     );
 }

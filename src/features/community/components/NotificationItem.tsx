@@ -3,12 +3,12 @@
  * Hiển thị một notification
  */
 
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import React, { useEffect, useState } from 'react';
+import { Text, TouchableOpacity, View } from 'react-native';
+import { CommunityColors, ComponentSizes } from '../design-system';
 import { Notification } from '../models';
 import { notificationStyles } from '../styles';
-import { CommunityColors, ComponentSizes } from '../design-system';
 
 interface NotificationItemProps {
   notification: Notification;
@@ -66,6 +66,8 @@ export function NotificationItem({ notification, onPress }: NotificationItemProp
         return 'at';
       case 'follow':
         return 'person.badge.plus';
+      case 'report':
+        return 'exclamationmark.triangle.fill';
       default:
         return 'bell.fill';
     }

@@ -4,11 +4,11 @@
  */
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { useAuth } from '@/context/AuthContext';
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
     Alert,
-    KeyboardAvoidingView,
-    Platform,
     Text,
     TextInput,
     TouchableOpacity,
@@ -33,8 +33,24 @@ export function CommentInput({
   onCancelReply 
 }: CommentInputProps) {
   const [comment, setComment] = useState('');
+  const { isLoggedIn } = useAuth();
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    // Authentication guard - block guests from submitting comments
+    if (!isLoggedIn) {
+      // Note: Pending action đã được lưu ở usePostDetailVM.handleSubmitComment
+      // Ở đây chỉ cần hiện popup
+      Alert.alert(
+        'Yêu cầu đăng nhập',
+        'Bạn cần đăng nhập để thực hiện hành động này',
+        [
+          { text: 'Hủy', style: 'cancel' },
+          { text: 'Đăng nhập', onPress: () => router.push('/auth/login') }
+        ]
+      );
+      return;
+    }
+
     const trimmedComment = comment.trim();
     
     if (!trimmedComment) {
@@ -59,26 +75,22 @@ export function CommentInput({
   const canSubmit = comment.trim() && !loading;
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-    >
-      <View style={commentStyles.commentInputContainer}>
-        {/* Reply context */}
-        {replyingTo && (
-          <View style={commentStyles.replyContext}>
-            <Text style={commentStyles.replyText}>
-              Đang trả lời @{replyingTo.author.name}
-            </Text>
-            {onCancelReply && (
-              <TouchableOpacity onPress={onCancelReply} style={commentStyles.cancelReply}>
-                <IconSymbol name="xmark" size={16} color={CommunityColors.bodyText} />
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
+    <View style={commentStyles.commentInputContainer}>
+      {/* Reply context */}
+      {replyingTo && (
+        <View style={commentStyles.replyContext}>
+          <Text style={commentStyles.replyText}>
+            Đang trả lời @{replyingTo.author.name}
+          </Text>
+          {onCancelReply && (
+            <TouchableOpacity onPress={onCancelReply} style={commentStyles.cancelReply}>
+              <IconSymbol name="xmark" size={16} color={CommunityColors.bodyText} />
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
 
-        <View style={commentStyles.inputContainer}>
+      <View style={commentStyles.inputContainer}>
           <TouchableOpacity 
             onPress={handleCameraPress}
             style={commentStyles.cameraButton}
@@ -116,7 +128,6 @@ export function CommentInput({
             />
           </TouchableOpacity>
         </View>
-      </View>
-    </KeyboardAvoidingView>
+    </View>
   );
 }

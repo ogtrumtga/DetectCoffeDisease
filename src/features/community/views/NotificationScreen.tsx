@@ -6,7 +6,7 @@
 import { SafeArea } from '@/components/SafeArea';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -17,6 +17,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import { clearPendingAction } from '../../../utils/pendingAction';
 import { SwipeableNotificationItem } from '../components';
 import { CommunityColors } from '../design-system';
 import { Notification } from '../models';
@@ -40,6 +41,16 @@ export default function NotificationScreen() {
     handleDeleteNotification,
     handleNotificationPress
   } = useNotificationVM();
+
+  // Xóa pending action khi màn hình mount
+  // Đảm bảo không bị redirect lại khi quay về tab Community
+  useEffect(() => {
+    const cleanup = async () => {
+      await clearPendingAction();
+      console.log('Cleared pending action on NotificationScreen mount');
+    };
+    cleanup();
+  }, []);
 
   const onNotificationPress = async (notification: Notification) => {
     const result = await handleNotificationPress(notification);

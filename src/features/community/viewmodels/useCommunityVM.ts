@@ -3,12 +3,18 @@
  * Logic cho màn hình Community chính
  */
 
+import { useAuth } from '@/context/AuthContext';
+import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert } from 'react-native';
+import { savePendingAction } from '../../../utils/pendingAction';
 import { CommunityPost } from '../models';
 import { communityService } from '../services';
 
 export const useCommunityVM = () => {
+  // Authentication
+  const { isLoggedIn } = useAuth();
+
   // State management
   const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [loading, setLoading] = useState(false);
@@ -87,6 +93,30 @@ export const useCommunityVM = () => {
   };
 
   const handleLike = async (postId: string) => {
+    // Authentication guard - block guests from liking posts
+    if (!isLoggedIn) {
+      // Lưu pending action - sau khi đăng nhập sẽ quay lại và tự động like
+      const post = posts.find(p => p.id === postId);
+      await savePendingAction({
+        action: 'like-post',
+        returnPath: '/(tabs)/community',
+        data: {
+          postId,
+          postData: post ? JSON.stringify(post) : undefined,
+        },
+      });
+      
+      Alert.alert(
+        'Yêu cầu đăng nhập',
+        'Bạn cần đăng nhập để thực hiện hành động này',
+        [
+          { text: 'Hủy', style: 'cancel' },
+          { text: 'Đăng nhập', onPress: () => router.push('/auth/login') }
+        ]
+      );
+      return;
+    }
+
     try {
       const result = await communityService.toggleLike(postId);
       

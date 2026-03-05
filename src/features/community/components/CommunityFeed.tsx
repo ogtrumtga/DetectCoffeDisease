@@ -5,15 +5,15 @@
 
 import React from 'react';
 import {
-  ActivityIndicator,
-  FlatList,
-  RefreshControl,
-  Text,
-  View
+    ActivityIndicator,
+    FlatList,
+    RefreshControl,
+    Text,
+    View
 } from 'react-native';
+import { CommunityColors } from '../design-system';
 import { CommunityPost } from '../models';
 import { communityStyles } from '../styles';
-import { CommunityColors } from '../design-system';
 import { PostCard } from './PostCard';
 
 interface CommunityFeedProps {
@@ -25,7 +25,6 @@ interface CommunityFeedProps {
   onLike: (postId: string) => void;
   onComment: (postId: string) => void;
   onPostPress: (postId: string) => void;
-  onShare?: (postId: string) => void;
 }
 
 export function CommunityFeed({
@@ -36,8 +35,7 @@ export function CommunityFeed({
   onLoadMore,
   onLike,
   onComment,
-  onPostPress,
-  onShare
+  onPostPress
 }: CommunityFeedProps) {
   const renderPost = ({ item }: { item: CommunityPost }) => (
     <PostCard
@@ -45,7 +43,6 @@ export function CommunityFeed({
       onLike={onLike}
       onComment={onComment}
       onPress={onPostPress}
-      onShare={onShare}
     />
   );
 

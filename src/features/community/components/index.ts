@@ -15,4 +15,6 @@ export { PostActions } from './PostActions';
 export { PostCard } from './PostCard';
 export { PostContent } from './PostContent';
 export { PostHeader } from './PostHeader';
+export { ReportModal } from './ReportModal';
 export { SwipeableNotificationItem } from './SwipeableNotificationItem';
+

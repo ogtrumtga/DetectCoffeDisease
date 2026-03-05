@@ -1,31 +1,43 @@
+// src/features/auth/views/loginView.tsx
 import { Link, useRouter } from "expo-router";
 import { ChevronLeft, Eye, EyeOff, Mail } from "lucide-react-native";
 import React from "react";
 import {
   ActivityIndicator,
   Image,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import { authStyles as styles } from "../styles/auth.styles";
 import { useLogin } from "../viewmodels/useLogin";
-import { Colors } from "../constants/Colors";
 
 interface LoginViewProps {
   onLoginSuccess: () => void;
 }
 
-const GOOGLE_LOGO_URI = "https://cdn-icons-png.flaticon.com/512/2991/2991148.png";
+const GOOGLE_LOGO_URI =
+  "https://cdn-icons-png.flaticon.com/512/2991/2991148.png";
 
 export default function LoginScreen({ onLoginSuccess }: LoginViewProps) {
   const router = useRouter();
 
   const {
-    email, setEmail, password, setPassword, showPass, setShowPass,
-    errors, emailHint, errorMessage, loading, clearAllErrors, onLoginPress,
+    email,
+    setEmail,
+    password,
+    setPassword,
+    showPass,
+    setShowPass,
+    errors,
+    errorMessage,
+    loading,
+    clearAllErrors,
+    onLoginPress,
   } = useLogin();
 
   const handleLogin = async () => {
@@ -42,10 +54,20 @@ export default function LoginScreen({ onLoginSuccess }: LoginViewProps) {
         <Text style={styles.headerTitle}>Đăng nhập</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+      >
+        <ScrollView
+          contentContainerStyle={styles.body}
+          keyboardShouldPersistTaps="handled"
+        >
         {/* EMAIL */}
         <Text style={styles.label}>Email</Text>
-        <View style={[styles.inputContainer, errors.email && { borderColor: Colors.alertBorder }]}>
+        <View
+          style={[styles.inputContainer, errors.email && styles.inputError]}
+        >
           <TextInput
             style={styles.input}
             value={email}
@@ -56,11 +78,12 @@ export default function LoginScreen({ onLoginSuccess }: LoginViewProps) {
           />
           <Mail size={24} color="black" style={styles.iconRight} />
         </View>
-        {errors.email && <Text style={{ color: Colors.error, fontSize: 12, marginTop: 4 }}>{emailHint}</Text>}
 
         {/* PASSWORD */}
         <Text style={styles.label}>Mật khẩu</Text>
-        <View style={[styles.inputContainer, errors.password && { borderColor: Colors.alertBorder }]}>
+        <View
+          style={[styles.inputContainer, errors.password && styles.inputError]}
+        >
           <TextInput
             style={styles.input}
             secureTextEntry={!showPass}
@@ -70,7 +93,11 @@ export default function LoginScreen({ onLoginSuccess }: LoginViewProps) {
             onFocus={clearAllErrors}
           />
           <TouchableOpacity onPress={() => setShowPass(!showPass)}>
-            {showPass ? <EyeOff size={24} color="black" style={styles.iconRight} /> : <Eye size={24} color="black" style={styles.iconRight} />}
+            {showPass ? (
+              <EyeOff size={24} color="black" style={styles.iconRight} />
+            ) : (
+              <Eye size={24} color="black" style={styles.iconRight} />
+            )}
           </TouchableOpacity>
         </View>
 
@@ -84,9 +111,14 @@ export default function LoginScreen({ onLoginSuccess }: LoginViewProps) {
           onPress={handleLogin}
           disabled={loading}
         >
-          {loading ? <ActivityIndicator color="white" /> : <Text style={styles.btnText}>Đăng nhập</Text>}
+          {loading ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text style={styles.btnText}>Đăng nhập</Text>
+          )}
         </TouchableOpacity>
 
+        {/* GOOGLE */}
         <TouchableOpacity style={styles.btnGoogle}>
           <Image source={{ uri: GOOGLE_LOGO_URI }} style={styles.googleLogo} />
           <Text style={styles.googleText}>Đăng nhập bằng Google</Text>
@@ -96,7 +128,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginViewProps) {
           <Text style={styles.footerText}>Bạn chưa có tài khoản ?</Text>
           <Link href="/auth/register" asChild>
             <TouchableOpacity>
-              <Text style={styles.linkText}> Đăng ký</Text>
+              <Text style={styles.linkText}>Đăng ký</Text>
             </TouchableOpacity>
           </Link>
         </View>
@@ -107,6 +139,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginViewProps) {
           </View>
         )}
       </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }

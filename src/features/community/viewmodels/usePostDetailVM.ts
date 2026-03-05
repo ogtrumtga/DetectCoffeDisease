@@ -3,8 +3,11 @@
  * Logic cho màn hình chi tiết post
  */
 
+import { useAuth } from '@/context/AuthContext';
+import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert } from 'react-native';
+import { savePendingAction } from '../../../utils/pendingAction';
 import { Comment, CommunityPost } from '../models';
 import { commentService, communityService } from '../services';
 
@@ -14,6 +17,9 @@ interface UsePostDetailVMProps {
 }
 
 export const usePostDetailVM = ({ postId, initialPost }: UsePostDetailVMProps) => {
+  // Authentication
+  const { isLoggedIn } = useAuth();
+
   // State management
   const [post, setPost] = useState<CommunityPost | null>(initialPost || null);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -106,6 +112,29 @@ export const usePostDetailVM = ({ postId, initialPost }: UsePostDetailVMProps) =
   const handleLike = async () => {
     if (!post) return;
 
+    // Authentication guard - block guests from liking posts
+    if (!isLoggedIn) {
+      // Lưu pending action - sau khi đăng nhập sẽ quay lại post detail và tự động like
+      await savePendingAction({
+        action: 'like-post',
+        returnPath: '/(tabs)/community/post-detail',
+        data: {
+          postId: post.id,
+          postData: JSON.stringify(post),
+        },
+      });
+      
+      Alert.alert(
+        'Yêu cầu đăng nhập',
+        'Bạn cần đăng nhập để thực hiện hành động này',
+        [
+          { text: 'Hủy', style: 'cancel' },
+          { text: 'Đăng nhập', onPress: () => router.push('/auth/login') }
+        ]
+      );
+      return;
+    }
+
     try {
       const result = await communityService.toggleLike(post.id);
       const updatedPost = {
@@ -164,6 +193,29 @@ export const usePostDetailVM = ({ postId, initialPost }: UsePostDetailVMProps) =
 
   const handleSubmitComment = async (content: string, parentId?: string) => {
     if (!postId || !post) return false;
+
+    // Authentication guard - block guests from commenting
+    if (!isLoggedIn) {
+      // Lưu pending action - sau khi đăng nhập sẽ quay lại post detail
+      await savePendingAction({
+        action: 'comment',
+        returnPath: '/(tabs)/community/post-detail',
+        data: {
+          postId,
+          postData: JSON.stringify(post),
+        },
+      });
+      
+      Alert.alert(
+        'Yêu cầu đăng nhập',
+        'Bạn cần đăng nhập để thực hiện hành động này',
+        [
+          { text: 'Hủy', style: 'cancel' },
+          { text: 'Đăng nhập', onPress: () => router.push('/auth/login') }
+        ]
+      );
+      return false;
+    }
 
     setCommentLoading(true);
     try {
@@ -242,6 +294,32 @@ export const usePostDetailVM = ({ postId, initialPost }: UsePostDetailVMProps) =
   };
 
   const handleLikeComment = async (commentId: string) => {
+    // Authentication guard - block guests from liking comments
+    if (!isLoggedIn) {
+      // Lưu pending action - sau khi đăng nhập sẽ quay lại post detail
+      if (post) {
+        await savePendingAction({
+          action: 'like-comment',
+          returnPath: '/(tabs)/community/post-detail',
+          data: {
+            postId: post.id,
+            postData: JSON.stringify(post),
+            commentId,
+          },
+        });
+      }
+      
+      Alert.alert(
+        'Yêu cầu đăng nhập',
+        'Bạn cần đăng nhập để thực hiện hành động này',
+        [
+          { text: 'Hủy', style: 'cancel' },
+          { text: 'Đăng nhập', onPress: () => router.push('/auth/login') }
+        ]
+      );
+      return;
+    }
+
     try {
       const result = await commentService.toggleCommentLike(commentId);
       

@@ -7,24 +7,22 @@ import React from 'react';
 import { TouchableOpacity, View } from 'react-native';
 import { CommunityPost } from '../models';
 import { postStyles } from '../styles';
-import { PostHeader } from './PostHeader';
-import { PostContent } from './PostContent';
 import { PostActions } from './PostActions';
+import { PostContent } from './PostContent';
+import { PostHeader } from './PostHeader';
 
 interface PostCardProps {
   post: CommunityPost;
   onLike: (postId: string) => void;
   onComment: (postId: string) => void;
   onPress: (postId: string) => void;
-  onShare?: (postId: string) => void;
 }
 
 export function PostCard({ 
   post, 
   onLike, 
   onComment, 
-  onPress,
-  onShare 
+  onPress
 }: PostCardProps) {
   const handlePress = () => {
     onPress(post.id);
@@ -38,11 +36,7 @@ export function PostCard({
     onComment(post.id);
   };
 
-  const handleShare = () => {
-    if (onShare) {
-      onShare(post.id);
-    }
-  };
+
 
   return (
     <TouchableOpacity 
@@ -74,7 +68,6 @@ export function PostCard({
           isDetailView={false}
           onLike={handleLike}
           onComment={handleComment}
-          onShare={handleShare}
         />
       </View>
     </TouchableOpacity>

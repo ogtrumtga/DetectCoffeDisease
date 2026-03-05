@@ -3,11 +3,11 @@
  * Hiển thị các nút hành động của post (Like, Comment, Share)
  */
 
-import React from 'react';
-import { View, TouchableOpacity, Text } from 'react-native';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { postStyles } from '../styles';
+import React from 'react';
+import { Text, TouchableOpacity, View } from 'react-native';
 import { CommunityColors } from '../design-system';
+import { postStyles } from '../styles';
 
 interface PostActionsProps {
   likes: number;
@@ -16,7 +16,6 @@ interface PostActionsProps {
   isDetailView?: boolean;
   onLike: () => void;
   onComment: () => void;
-  onShare: () => void;
 }
 
 export function PostActions({
@@ -25,8 +24,7 @@ export function PostActions({
   isLiked = false,
   isDetailView = false,
   onLike,
-  onComment,
-  onShare
+  onComment
 }: PostActionsProps) {
   const handleLike = (e: any) => {
     e.stopPropagation();
@@ -36,11 +34,6 @@ export function PostActions({
   const handleComment = (e: any) => {
     e.stopPropagation();
     onComment();
-  };
-
-  const handleShare = (e: any) => {
-    e.stopPropagation();
-    onShare();
   };
 
   return (
@@ -73,18 +66,6 @@ export function PostActions({
         <Text style={isDetailView ? postStyles.actionTextDetail : postStyles.actionText}>
           {comments}
         </Text>
-      </TouchableOpacity>
-
-      {/* Share Button */}
-      <TouchableOpacity 
-        style={isDetailView ? postStyles.actionButtonDetail : postStyles.actionButton}
-        onPress={handleShare}
-      >
-        <IconSymbol 
-          name="square.and.arrow.up" 
-          size={isDetailView ? 20 : 18} 
-          color={CommunityColors.shareButton}
-        />
       </TouchableOpacity>
     </View>
   );

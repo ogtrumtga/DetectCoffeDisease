@@ -5,10 +5,12 @@
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import React, { useEffect, useState } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { CommunityColors } from '../design-system';
 import { Comment } from '../models';
+import { notificationService } from '../services';
 import { commentStyles } from '../styles';
+import { ReportModal } from './ReportModal';
 
 interface CommentItemProps {
   comment: Comment;
@@ -16,10 +18,17 @@ interface CommentItemProps {
   onReply?: (comment: Comment) => void;
   isReply?: boolean;
   highlightedCommentId?: string | null;
+  currentUserId?: string; // ID của user hiện tại để kiểm tra có phải comment của mình không
+  postId?: string; // ID của post chứa comment
 }
 
-export function CommentItem({ comment, onLike, onReply, isReply = false, highlightedCommentId = null }: CommentItemProps) {
+export function CommentItem({ comment, onLike, onReply, isReply = false, highlightedCommentId = null, currentUserId, postId }: CommentItemProps) {
   const [timeAgo, setTimeAgo] = useState('');
+  const [showMenu, setShowMenu] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+
+  // Kiểm tra xem comment có phải của user hiện tại không
+  const isOwnComment = currentUserId && comment.author.id === currentUserId;
 
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
@@ -66,6 +75,36 @@ export function CommentItem({ comment, onLike, onReply, isReply = false, highlig
   const handleReply = () => {
     if (onReply) {
       onReply(comment);
+    }
+  };
+
+  const handleReport = async (reason: string) => {
+    if (!currentUserId || !postId) {
+      console.error('Missing currentUserId or postId');
+      return;
+    }
+
+    try {
+      // TODO: Lấy tên user từ AuthContext hoặc UserService
+      const currentUserName = 'Người dùng hiện tại';
+      
+      // Tạo notification báo cáo
+      await notificationService.createReportNotification(
+        currentUserId,
+        currentUserName,
+        comment.author.id,
+        comment.author.name,
+        comment.id,
+        comment.content,
+        postId,
+        reason
+      );
+      
+      console.log('Report submitted successfully');
+      // Có thể hiển thị toast thông báo thành công
+    } catch (error) {
+      console.error('Error submitting report:', error);
+      // Có thể hiển thị toast thông báo lỗi
     }
   };
 
@@ -145,6 +184,17 @@ export function CommentItem({ comment, onLike, onReply, isReply = false, highlig
             )}
           </View>
         </View>
+
+        {/* Menu 3 chấm */}
+        <TouchableOpacity 
+          style={styles.menuButton}
+          onPress={() => {
+            console.log('Menu button pressed');
+            setShowMenu(true);
+          }}
+        >
+          <Text style={{ fontSize: 20, color: '#000' }}>⋮</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Render replies */}
@@ -157,6 +207,8 @@ export function CommentItem({ comment, onLike, onReply, isReply = false, highlig
               onLike={onLike}
               isReply={true}
               highlightedCommentId={highlightedCommentId}
+              currentUserId={currentUserId}
+              postId={postId}
             />
           ))}
         </View>
@@ -166,6 +218,82 @@ export function CommentItem({ comment, onLike, onReply, isReply = false, highlig
       {!isReply && (
         <View style={commentStyles.mainCommentSeparator} />
       )}
+
+      {/* Menu Modal */}
+      <Modal
+        visible={showMenu}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowMenu(false)}
+      >
+        <TouchableOpacity 
+          style={styles.menuOverlay}
+          activeOpacity={1}
+          onPress={() => setShowMenu(false)}
+        >
+          <View style={styles.menuContainer}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setShowMenu(false);
+                setShowReportModal(true);
+              }}
+            >
+              <IconSymbol 
+                name="exclamationmark.triangle" 
+                size={20} 
+                color="#ef4444"
+              />
+              <Text style={styles.menuItemText}>Báo cáo</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Report Modal */}
+      <ReportModal
+        visible={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        onSubmit={handleReport}
+        reportedUserName={comment.author.name}
+      />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  menuButton: {
+    padding: 8,
+    position: 'absolute',
+    top: 8,
+    right: 8,
+  },
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  menuContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 8,
+    minWidth: 200,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    gap: 12,
+  },
+  menuItemText: {
+    fontSize: 16,
+    color: '#ef4444',
+    fontWeight: '500',
+  },
+});
