@@ -1,0 +1,121 @@
+import { StyleSheet, Dimensions } from "react-native";
+
+const { width } = Dimensions.get("window");
+
+export const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#000" },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    backgroundColor: "#2D3142",
+  },
+  headerTitle: { color: "white", fontSize: 18, fontWeight: "600" },
+  backButton: { padding: 5 },
+  cameraContainer: { flex: 1 },
+  camera: { flex: 1 },
+  // Overlay styles
+  overlay: {
+    flex: 1,
+    backgroundColor: "transparent",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  viewfinder: {
+    width: width * 0.7,
+    height: width * 0.9, // Tỉ lệ khung hình đứng giống hình mẫu
+    backgroundColor: "transparent",
+    position: "relative",
+  },
+  corner: {
+    position: "absolute",
+    width: 40,
+    height: 40,
+    borderColor: "white",
+  },
+  topLeft: {
+    top: 0,
+    left: 0,
+    borderTopWidth: 4,
+    borderLeftWidth: 4,
+    borderTopLeftRadius: 20,
+  },
+  topRight: {
+    top: 0,
+    right: 0,
+    borderTopWidth: 4,
+    borderRightWidth: 4,
+    borderTopRightRadius: 20,
+  },
+  bottomLeft: {
+    bottom: 0,
+    left: 0,
+    borderBottomWidth: 4,
+    borderLeftWidth: 4,
+    borderBottomLeftRadius: 20,
+  },
+  bottomRight: {
+    bottom: 0,
+    right: 0,
+    borderBottomWidth: 4,
+    borderRightWidth: 4,
+    borderBottomRightRadius: 20,
+  },
+  hintText: {
+    color: "white",
+    marginTop: 20,
+    fontSize: 14,
+    textAlign: "center",
+    backgroundColor: "rgba(0,0,0,0.3)",
+    paddingHorizontal: 10,
+    borderRadius: 5,
+  },
+  // Controls styles
+  controls: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+    paddingVertical: 25,
+    backgroundColor: "#2D3142",
+  },
+  controlButton: { padding: 15 },
+  captureButton: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: "white",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 5,
+    borderColor: "#ABE0AC",
+  },
+  captureButtonInner: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: "#ABE0AC",
+  },
+  previewButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "white",
+    paddingHorizontal: 25,
+    paddingVertical: 12,
+    borderRadius: 25,
+  },
+  previewButtonText: { marginLeft: 8, fontSize: 16, color: "#333" },
+  confirmButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#2A9D8F",
+    paddingHorizontal: 25,
+    paddingVertical: 12,
+    borderRadius: 25,
+  },
+  confirmButtonText: { marginLeft: 8, fontSize: 16, color: "white" },
+  message: { color: "white", textAlign: "center", marginBottom: 20 },
+  button: { backgroundColor: "#ABE0AC", padding: 15, borderRadius: 10 },
+  buttonText: { color: "#2D3142", fontWeight: "bold" },
+});

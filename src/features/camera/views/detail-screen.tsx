@@ -1,71 +1,28 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React from "react";
 import {
   ActivityIndicator,
   SafeAreaView,
   ScrollView,
-  StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  Alert
 } from "react-native";
-// Import store giả từ trang profile (Trong thực tế nên dùng Context)
-import { globalHistoryData } from "../../profile/views/profileLoggedIn";
+import { styles } from "../styles/detail-screen-style";
+import { useDetailScreenVM } from "../viewmodels/detail-screenVM";
 
 export default function DetailScreen() {
-  const [isSaving, setIsSaving] = useState(false);
-  const router = useRouter();
-
-  const handleSaveHistory = async () => {
-    setIsSaving(true);
-
-    setTimeout(() => {
-      const isError = Math.random() < 0.1; // Tỷ lệ lỗi 10%
-
-      setIsSaving(false);
-      if (isError) {
-        router.push({
-          pathname: "/error",
-          params: {
-            title: "Lỗi lưu trữ",
-            message: "Không thể kết nối với máy chủ để lưu kết quả.",
-          },
-        });
-      } else {
-        // 1. Thêm dữ liệu mới vào "kho"
-        const newRecord = {
-          id: Date.now().toString(), // Tạo ID ngẫu nhiên
-          title: "Bệnh gỉ sắt",
-          date: new Date().toLocaleDateString('vi-VN'),
-        };
-        
-        globalHistoryData.unshift(newRecord); // Thêm vào đầu danh sách
-
-        // 2. Thông báo và chuyển hướng
-        Alert.alert("Thành công", "Đã lưu vào lịch sử chẩn đoán!", [
-          { 
-            text: "OK", 
-            onPress: () => router.push("/(tabs)/profile/loggedInScreen") 
-          }
-        ]);
-      }
-    }, 1500);
-  };
+  const { isSaving, handleSaveHistory, goBack } = useDetailScreenVM();
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => {
-            if (router.canGoBack()) router.back();
-            else router.replace("/(tabs)/camera/cameraIndex");
-          }}
-        >
+        <TouchableOpacity onPress={goBack}>
           <Ionicons name="chevron-back" size={28} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Kết quả ngày {new Date().getDate()}/{new Date().getMonth() + 1}</Text>
+        <Text style={styles.headerTitle}>
+          Kết quả ngày {new Date().getDate()}/{new Date().getMonth() + 1}
+        </Text>
       </View>
 
       <ScrollView
@@ -129,71 +86,3 @@ export default function DetailScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFFFFF" },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 15,
-    paddingVertical: 15,
-    backgroundColor: "#F9FCF9",
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#333",
-    marginLeft: 10,
-  },
-  scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
-  sectionContainer: { marginTop: 25 },
-  badgeRow: { flexDirection: "row", alignItems: "center", marginBottom: 15 },
-  numberBadge: {
-    backgroundColor: "#ABE0AC",
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  numberBadgeText: { color: "white", fontWeight: "bold", fontSize: 18 },
-  sectionHeading: { fontSize: 18, fontWeight: "700", color: "#1A1A1A" },
-  resultCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFF",
-    borderRadius: 15,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "#EEE",
-    elevation: 2,
-  },
-  diseaseNameText: { fontSize: 16, fontWeight: "600", flex: 1 },
-  arrowIcon: { marginLeft: "auto" },
-  medicineItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
-  },
-  medTitle: { fontSize: 16, fontWeight: "bold", color: "#000" },
-  medSub: { fontSize: 13, color: "#666", marginTop: 4 },
-  linkText: {
-    color: "#0000FF",
-    fontSize: 12,
-    fontStyle: "italic",
-    textDecorationLine: "underline",
-  },
-  mainActionBtn: {
-    backgroundColor: "#ABE0AC",
-    height: 55,
-    borderRadius: 30,
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 40,
-  },
-  mainActionBtnText: { color: "white", fontSize: 18, fontWeight: "bold" },
-});

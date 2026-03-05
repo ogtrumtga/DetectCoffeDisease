@@ -1,3 +1,4 @@
+// src/features/auth/constants/auth.messages.ts
 export const AUTH_MESSAGES = {
     loginSuccess: {
         title: "Thành công",
