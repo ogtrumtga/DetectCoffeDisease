@@ -1,3 +1,4 @@
+// src/features/profile/viewmodels/profileDetailVM.ts
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useState } from "react";
@@ -35,34 +36,35 @@ export const useProfileDetailVM = () => {
     setLoading(true);
 
     setTimeout(() => {
-      const isError = user.name.length < 2;
+      // Logic kiểm tra lỗi: tên quá ngắn (từ Bản 2)
+      // hoặc xác suất ngẫu nhiên (từ Bản 1)
+      const isError = user.name.length < 2 || Math.random() < 0.1;
       setLoading(false);
 
       if (isError) {
-        const errorMsg = PROFILE_MESSAGES.UPDATE_ERROR_BODY;
-        // Kiểm tra nếu là Web (Windows)
+        const errorMsg =
+          PROFILE_MESSAGES?.UPDATE_ERROR_BODY || "Cập nhật thất bại";
         if (Platform.OS === "web") {
           window.alert(errorMsg);
         } else {
-          Alert.alert(PROFILE_MESSAGES.UPDATE_ERROR_TITLE, errorMsg);
+          // Nếu có file constants thì dùng, không thì dùng text mặc định
+          Alert.alert(PROFILE_MESSAGES?.UPDATE_ERROR_TITLE || "Lỗi", errorMsg);
         }
       } else {
-        // 1. Cập nhật dữ liệu vào biến Global
+        // Cập nhật dữ liệu vào biến Global
         globalUserData.name = user.name;
         globalUserData.bio = user.bio;
         globalUserData.avatar = user.avatar;
 
-        const successMsg = PROFILE_MESSAGES.UPDATE_SUCCESS_BODY;
+        const successMsg =
+          PROFILE_MESSAGES?.UPDATE_SUCCESS_BODY || "Cập nhật thành công";
 
-        // 2. Xử lý thông báo đa nền tảng
         if (Platform.OS === "web") {
-          // window.alert là hàm "blocking" - nó sẽ dừng JS cho đến khi bạn bấm OK
           window.alert(successMsg);
-          handleGoBack(); // Quay về sau khi bấm OK trên trình duyệt
+          handleGoBack();
         } else {
-          // Alert native trên Mobile
           Alert.alert(
-            PROFILE_MESSAGES.UPDATE_SUCCESS_TITLE,
+            PROFILE_MESSAGES?.UPDATE_SUCCESS_TITLE || "Thành công",
             successMsg,
             [{ text: "OK", onPress: () => handleGoBack() }],
             { cancelable: false },
@@ -71,11 +73,13 @@ export const useProfileDetailVM = () => {
       }
     }, 1000);
   };
-//POST /api/auth/logout
-  //PUT /api/users/me
-  //PUT /api/users/me/avatar
-  //DELETE /api/users/me
+
+  // POST /api/auth/logout
+  // PUT /api/users/me
+  // PUT /api/users/me/avatar
+  // DELETE /api/users/me
   const handleLogout = () => router.replace("/(tabs)/profile/guestScreen");
+
   const navigateToRegister = () => {
     setShowMenu(false);
     router.push("/auth/register");

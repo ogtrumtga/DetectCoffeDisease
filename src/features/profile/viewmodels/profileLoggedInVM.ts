@@ -1,7 +1,7 @@
+// src/features/profile/viewmodels/profileLoggedInVM.ts
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 
-// Biến global để dùng chung giữa các màn hình
 export let globalHistoryData = [
   { id: "1", title: "C", date: "8 tháng 1" },
   { id: "2", title: "không khô quả", date: "Ngày 1 tháng 12 năm 2025" },

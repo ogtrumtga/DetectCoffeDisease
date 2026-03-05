@@ -2,7 +2,7 @@
  * Community Service
  * API calls cho posts và community features
  */
-
+// src/features/community/services/communityService.ts
 import { CommunityPost, CreatePostRequest, PaginatedResponse } from '../models';
 
 // Base URL cho API - sẽ được config từ environment

@@ -2,7 +2,7 @@
  * Post Detail Screen
  * Màn hình chi tiết post với comments
  */
-
+// src/features/community/views/PostDetailScreen.tsx
 import { SafeArea } from '@/components/SafeArea';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { router, useLocalSearchParams } from 'expo-router';

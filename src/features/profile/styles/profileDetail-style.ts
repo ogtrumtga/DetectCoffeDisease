@@ -1,4 +1,3 @@
-// src/features/profile/styles/profileDetail-style.ts
 import { Dimensions, StyleSheet } from "react-native";
 
 const { width } = Dimensions.get("window");
@@ -54,6 +53,7 @@ export const styles = StyleSheet.create({
     borderColor: "#FFF",
     justifyContent: "center",
     alignItems: "center",
+    overflow: "hidden", // Đảm bảo ảnh không tràn viền
   },
   scrollContent: {
     paddingHorizontal: 35,
