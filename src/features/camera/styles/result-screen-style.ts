@@ -50,7 +50,7 @@ export const styles = StyleSheet.create({
     borderRadius: 15,
   },
   confidenceText: {
-    color: "#2A9D8F",
+    color: "#ABE0AC",
     fontSize: 12,
     fontWeight: "600",
   },
@@ -90,7 +90,7 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
   },
   medicineButton: {
-    backgroundColor: "#2A9D8F",
+    backgroundColor: "#ABE0AC",
   },
   medicineButtonText: {
     marginLeft: 10,
@@ -104,7 +104,7 @@ export const styles = StyleSheet.create({
   rediagnoseButtonText: {
     marginLeft: 10,
     fontSize: 16,
-    color: "#2A9D8F",
+    color: "#ABE0AC",
     fontWeight: "600",
   },
   loadingContainer: {
