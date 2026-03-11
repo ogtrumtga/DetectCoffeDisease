@@ -24,5 +24,5 @@ export default function Index() {
     return <Redirect href={"/(tabs)/camera/cameraIndex" as any} />;
   }
 
-  return <Redirect href={"/auth" as any} />;
+  return <Redirect href={"/(tabs)/camera/cameraIndex" as any} />;
 }

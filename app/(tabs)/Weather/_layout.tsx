@@ -6,7 +6,7 @@ export default function WeatherLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="weather" />
       <Stack.Screen name="explain-spray-rule" />
-      <Stack.Screen name="spray-time-modal" options={{ presentation: "modal" }} />
+      <Stack.Screen name="spray-time-modal" />
     </Stack>
   );
 }

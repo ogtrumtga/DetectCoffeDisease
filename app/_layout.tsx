@@ -42,13 +42,12 @@ export default function RootLayout() {
         <Stack
           screenOptions={{
             headerShown: false,
-            statusBarHidden: true,
             contentStyle: { backgroundColor: "black" },
           }}
         >
           <Stack.Screen name="index" />
           <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="auth" options={{ presentation: "modal" }} />
+          <Stack.Screen name="auth" />
         </Stack>
       </AuthProvider>
     </GestureHandlerRootView>

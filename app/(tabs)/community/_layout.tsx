@@ -26,7 +26,6 @@ export default function CommunityLayout() {
         <Stack.Screen
           name="notification-modal"
           options={{
-            presentation: "modal",
             headerShown: false,
           }}
         />

@@ -92,7 +92,7 @@ export const styles = StyleSheet.create({
     marginTop: 5,
   },
   logoutBtn: { paddingVertical: 10 },
-  logoutText: { fontSize: 15, color: "#D0D0D0" },
+  logoutText: { fontSize: 15, color: "#FF0000" },
   footer: { marginTop: 50, alignItems: "center" },
   saveBtn: {
     backgroundColor: "#B6E2C6",
