@@ -1,3 +1,4 @@
+// src/features/profile/styles/profileDetail-style.ts
 import { Dimensions, StyleSheet } from "react-native";
 
 const { width } = Dimensions.get("window");
@@ -43,17 +44,35 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: -55,
     zIndex: 10,
+    // Để camera có thể định vị chính xác theo container này
+    position: "relative", 
+    width: 110,
+    alignSelf: "center",
   },
   avatarBox: {
-    width: 100,
+    width: 110,
     height: 110,
     backgroundColor: "#E1F1E7",
-    borderRadius: 18,
+    borderRadius: 55, // Bo tròn tuyệt đối
     borderWidth: 4,
     borderColor: "#FFF",
     justifyContent: "center",
     alignItems: "center",
-    overflow: "hidden", // Đảm bảo ảnh không tràn viền
+    overflow: "hidden", // Cắt ảnh tải lên theo hình tròn
+  },
+  cameraIconContainer: {
+    position: "absolute",
+    bottom: 2, // Nằm sát mép dưới
+    right: 2,  // Nằm sát mép phải
+    backgroundColor: "#FFF",
+    borderRadius: 20,
+    padding: 7,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    zIndex: 11, // Đảm bảo nằm trên cùng
   },
   scrollContent: {
     paddingHorizontal: 35,

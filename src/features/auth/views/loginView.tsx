@@ -34,11 +34,13 @@ export default function LoginScreen({ onLoginSuccess }: LoginViewProps) {
     showPass,
     setShowPass,
     errors,
-    emailHint, // Cần lấy thêm hint
+    emailHint,
     errorMessage,
     loading,
     clearAllErrors,
     onLoginPress,
+    promptGoogleLogin,
+    googleRequestDisabled,
   } = useLogin();
 
   const handleLogin = async () => {
@@ -119,7 +121,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginViewProps) {
             <Text style={styles.forgotPassText}>Quên mật khẩu ?</Text>
           </TouchableOpacity>
 
-          {/* HIỂN THỊ LỖI TỔNG QUÁT (Sai tài khoản/mật khẩu) */}
+          {/* HIỂN THỊ LỖI TỔNG QUÁT */}
           {!!errorMessage && (
             <View style={[styles.errorBox, { marginBottom: 15 }]}>
               <Text style={styles.errorText}>{errorMessage}</Text>
@@ -139,8 +141,15 @@ export default function LoginScreen({ onLoginSuccess }: LoginViewProps) {
             )}
           </TouchableOpacity>
 
-          {/* GOOGLE */}
-          <TouchableOpacity style={styles.btnGoogle}>
+          {/* GOOGLE LOGIN */}
+          <TouchableOpacity
+            style={[
+              styles.btnGoogle,
+              googleRequestDisabled && { opacity: 0.5 },
+            ]}
+            onPress={() => promptGoogleLogin()}
+            disabled={googleRequestDisabled}
+          >
             <Image
               source={{ uri: GOOGLE_LOGO_URI }}
               style={styles.googleLogo}

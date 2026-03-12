@@ -1,5 +1,6 @@
+// src/features/profile/views/profileLoggedIn.tsx
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { router, Stack, useFocusEffect } from "expo-router"; // Thêm router vào đây
+import { router, Stack, useFocusEffect } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
@@ -25,14 +26,12 @@ export default function ProfileHomeScreen() {
     isDeleting,
     historyData,
     activityData,
-    userData,
     deleteItem,
     toggleLikePost,
     navigateToDetail,
     navigateToEditProfile,
   } = useProfileLoggedInVM();
 
-  // Trick để ép React render lại khi quay lại từ màn hình Edit trên Win/Web
   const [, setTick] = useState(0);
   useFocusEffect(
     useCallback(() => {
@@ -40,22 +39,20 @@ export default function ProfileHomeScreen() {
     }, []),
   );
 
-  const renderRightActions = (id: string) => (
-    <TouchableOpacity
-      style={styles.deleteAction}
-      onPress={() => deleteItem(id)}
-      disabled={isDeleting === id}
-    >
-      {isDeleting === id ? (
-        <ActivityIndicator color="white" size="small" />
-      ) : (
-        <Ionicons name="trash-outline" size={24} color="white" />
-      )}
-    </TouchableOpacity>
-  );
-
   const renderHistoryItem = ({ item }: any) => (
-    <Swipeable renderRightActions={() => renderRightActions(item.id)}>
+    <Swipeable renderRightActions={() => (
+      <TouchableOpacity
+        style={styles.deleteAction}
+        onPress={() => deleteItem(item.id)}
+        disabled={isDeleting === item.id}
+      >
+        {isDeleting === item.id ? (
+          <ActivityIndicator color="white" size="small" />
+        ) : (
+          <Ionicons name="trash-outline" size={24} color="white" />
+        )}
+      </TouchableOpacity>
+    )}>
       <TouchableOpacity
         style={styles.listItem}
         onPress={() => navigateToDetail(item.id)}
@@ -76,14 +73,9 @@ export default function ProfileHomeScreen() {
     <TouchableOpacity
       style={styles.activityCard}
       onPress={() => {
-        // Chuyển hướng sang trang chi tiết bài viết trong cộng đồng
         router.push({
           pathname: "/(tabs)/community/post-detail",
-          params: {
-            postId: item.id,
-            // Nếu activityData có chứa object post đầy đủ, bạn có thể truyền qua postData
-            // postData: JSON.stringify(item)
-          },
+          params: { postId: item.id },
         });
       }}
     >
@@ -98,6 +90,7 @@ export default function ProfileHomeScreen() {
               <Image
                 source={{ uri: globalUserData.avatar }}
                 style={{ width: "100%", height: "100%", borderRadius: 16 }}
+                resizeMode="cover"
               />
             ) : null}
           </View>
@@ -120,33 +113,15 @@ export default function ProfileHomeScreen() {
                 size={22}
                 color={item.isLiked ? "#40916C" : "#728096"}
               />
-              <Text
-                style={[
-                  styles.interactionText,
-                  item.isLiked && { color: "#40916C" },
-                ]}
-              >
+              <Text style={[styles.interactionText, item.isLiked && { color: "#40916C" }]}>
                 {String(item.likes)}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.iconBtn}>
-              <MaterialCommunityIcons
-                name="comment-outline"
-                size={22}
-                color="#728096"
-              />
-              <Text style={styles.interactionText}>
-                {String(item.comments)}
-              </Text>
+              <MaterialCommunityIcons name="comment-outline" size={22} color="#728096" />
+              <Text style={styles.interactionText}>{String(item.comments)}</Text>
             </TouchableOpacity>
           </View>
-          {/* <TouchableOpacity>
-            <MaterialCommunityIcons
-              name="share-variant"
-              size={22}
-              color="#728096"
-            />
-          </TouchableOpacity> */}
         </View>
       </View>
     </TouchableOpacity>
@@ -163,7 +138,8 @@ export default function ProfileHomeScreen() {
             {globalUserData.avatar ? (
               <Image
                 source={{ uri: globalUserData.avatar }}
-                style={{ width: "100%", height: "100%", borderRadius: 12 }}
+                style={{ width: "100%", height: "100%", borderRadius: 37.5 }}
+                resizeMode="cover"
               />
             ) : (
               <Ionicons name="person" size={45} color="#ADB5BD" />
@@ -184,44 +160,22 @@ export default function ProfileHomeScreen() {
         <View style={styles.tabBar}>
           <TouchableOpacity
             onPress={() => setActiveTab("history")}
-            style={[
-              styles.tabItem,
-              activeTab === "history" && styles.activeTabBorder,
-            ]}
+            style={[styles.tabItem, activeTab === "history" && styles.activeTabBorder]}
           >
-            <Text
-              style={[
-                styles.tabLabel,
-                activeTab === "history" && styles.activeLabel,
-              ]}
-            >
-              Lịch sử và dự đoán
-            </Text>
+            <Text style={[styles.tabLabel, activeTab === "history" && styles.activeLabel]}>Lịch sử và dự đoán</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setActiveTab("activity")}
-            style={[
-              styles.tabItem,
-              activeTab === "activity" && styles.activeTabBorder,
-            ]}
+            style={[styles.tabItem, activeTab === "activity" && styles.activeTabBorder]}
           >
-            <Text
-              style={[
-                styles.tabLabel,
-                activeTab === "activity" && styles.activeLabel,
-              ]}
-            >
-              Hoạt động
-            </Text>
+            <Text style={[styles.tabLabel, activeTab === "activity" && styles.activeLabel]}>Hoạt động</Text>
           </TouchableOpacity>
         </View>
 
         <FlatList
           data={activeTab === "history" ? historyData : activityData}
           keyExtractor={(item) => item.id}
-          renderItem={
-            activeTab === "history" ? renderHistoryItem : renderActivityItem
-          }
+          renderItem={activeTab === "history" ? renderHistoryItem : renderActivityItem}
           contentContainerStyle={styles.listContainer}
           ListEmptyComponent={
             <View style={{ alignItems: "center", marginTop: 50 }}>

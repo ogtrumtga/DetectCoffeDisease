@@ -11,6 +11,13 @@ export const useProfileDetailVM = () => {
   const [loading, setLoading] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [user, setUser] = useState({ ...globalUserData });
+  
+  // State quản lý việc ẩn hiện ô nhập mật khẩu
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwords, setPasswords] = useState({
+    newPass: "",
+    confirmPass: "",
+  });
 
   const handleGoBack = () => {
     if (router.canGoBack()) {
@@ -33,6 +40,28 @@ export const useProfileDetailVM = () => {
   };
 
   const handleSaveProfile = async () => {
+    // Kiểm tra logic mật khẩu nếu đang mở chế độ đổi mật khẩu
+    if (isChangingPassword) {
+      if (!passwords.newPass || !passwords.confirmPass) {
+        const fillError = "Vui lòng nhập đầy đủ thông tin mật khẩu";
+        if (Platform.OS === "web") window.alert(fillError);
+        else Alert.alert("Lỗi", fillError);
+        return;
+      }
+      if (passwords.newPass !== passwords.confirmPass) {
+        const passError = "Mật khẩu xác nhận không khớp";
+        if (Platform.OS === "web") window.alert(passError);
+        else Alert.alert("Lỗi", passError);
+        return;
+      }
+      if (passwords.newPass.length < 6) {
+        const lengthError = "Mật khẩu phải từ 6 ký tự trở lên";
+        if (Platform.OS === "web") window.alert(lengthError);
+        else Alert.alert("Lỗi", lengthError);
+        return;
+      }
+    }
+
     setLoading(true);
 
     setTimeout(() => {
@@ -47,7 +76,6 @@ export const useProfileDetailVM = () => {
         if (Platform.OS === "web") {
           window.alert(errorMsg);
         } else {
-          // Nếu có file constants thì dùng, không thì dùng text mặc định
           Alert.alert(PROFILE_MESSAGES?.UPDATE_ERROR_TITLE || "Lỗi", errorMsg);
         }
       } else {
@@ -88,6 +116,10 @@ export const useProfileDetailVM = () => {
   return {
     user,
     setUser,
+    passwords,
+    setPasswords,
+    isChangingPassword,
+    setIsChangingPassword,
     loading,
     showMenu,
     setShowMenu,

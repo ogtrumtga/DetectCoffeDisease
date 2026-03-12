@@ -1,4 +1,4 @@
-// MyNewProject/app/_layout.tsx
+// app/(tabs)/_layout.tsx
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { useAuth } from "../../context/AuthContext";

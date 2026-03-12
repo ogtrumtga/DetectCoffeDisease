@@ -1,4 +1,5 @@
-import { StyleSheet, Dimensions } from "react-native";
+// src/features/camera/styles/camera-screen-style.ts
+import { StyleSheet, Dimensions, Platform } from "react-native";
 
 const { width } = Dimensions.get("window");
 
@@ -9,14 +10,14 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingVertical: 15,
+    paddingBottom: 15,
     backgroundColor: "#2D3142",
+    // Padding top sẽ được xử lý động trong View bằng useSafeAreaInsets
   },
   headerTitle: { color: "white", fontSize: 18, fontWeight: "600" },
   backButton: { padding: 5 },
   cameraContainer: { flex: 1 },
   camera: { flex: 1 },
-  // Overlay styles
   overlay: {
     flex: 1,
     backgroundColor: "transparent",
@@ -25,7 +26,7 @@ export const styles = StyleSheet.create({
   },
   viewfinder: {
     width: width * 0.7,
-    height: width * 0.9, // Tỉ lệ khung hình đứng giống hình mẫu
+    height: width * 0.9,
     backgroundColor: "transparent",
     position: "relative",
   },
@@ -68,23 +69,25 @@ export const styles = StyleSheet.create({
     marginTop: 20,
     fontSize: 14,
     textAlign: "center",
-    backgroundColor: "rgba(0,0,0,0.3)",
-    paddingHorizontal: 10,
-    borderRadius: 5,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 20,
+    overflow: "hidden",
   },
-  // Controls styles
   controls: {
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
-    paddingVertical: 25,
+    paddingTop: 20,
+    // Padding bottom sẽ được xử lý bằng insets.bottom
     backgroundColor: "#2D3142",
   },
   controlButton: { padding: 15 },
   captureButton: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 75,
+    height: 75,
+    borderRadius: 40,
     backgroundColor: "white",
     justifyContent: "center",
     alignItems: "center",
@@ -92,9 +95,9 @@ export const styles = StyleSheet.create({
     borderColor: "#ABE0AC",
   },
   captureButtonInner: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 55,
+    height: 55,
+    borderRadius: 30,
     backgroundColor: "#ABE0AC",
   },
   previewButton: {
@@ -105,7 +108,12 @@ export const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 25,
   },
-  previewButtonText: { marginLeft: 8, fontSize: 16, color: "#333" },
+  previewButtonText: {
+    marginLeft: 8,
+    fontSize: 16,
+    color: "#333",
+    fontWeight: "600",
+  },
   confirmButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -114,8 +122,23 @@ export const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 25,
   },
-  confirmButtonText: { marginLeft: 8, fontSize: 16, color: "white" },
-  message: { color: "white", textAlign: "center", marginBottom: 20 },
-  button: { backgroundColor: "#ABE0AC", padding: 15, borderRadius: 10 },
+  confirmButtonText: {
+    marginLeft: 8,
+    fontSize: 16,
+    color: "white",
+    fontWeight: "600",
+  },
+  message: {
+    color: "white",
+    textAlign: "center",
+    marginBottom: 20,
+    fontSize: 16,
+  },
+  button: {
+    backgroundColor: "#ABE0AC",
+    padding: 15,
+    borderRadius: 10,
+    alignSelf: "center",
+  },
   buttonText: { color: "#2D3142", fontWeight: "bold" },
 });

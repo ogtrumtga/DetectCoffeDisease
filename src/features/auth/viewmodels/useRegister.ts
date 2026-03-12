@@ -1,8 +1,12 @@
 // src/features/auth/viewmodels/useRegister.ts
+import * as Google from "expo-auth-session/providers/google";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import * as WebBrowser from "expo-web-browser";
+import { useEffect, useState } from "react";
 import { Alert, Platform } from "react-native";
 import { AUTH_MESSAGES } from "../constants/auth.messages";
+
+WebBrowser.maybeCompleteAuthSession();
 
 export const useRegister = () => {
   const router = useRouter();
@@ -12,34 +16,70 @@ export const useRegister = () => {
     pass: false,
     confirmPass: false,
   });
-  const [emailHint, setEmailHint] = useState(""); // Lưu thông báo gợi ý cụ thể
-
+  const [emailHint, setEmailHint] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [rememberPassword, setRememberPassword] = useState(false);
 
-  // Logic kiểm tra 6 ràng buộc email
+  // Giống login: hardcode proxy URI
+  const redirectUri = "https://auth.expo.io/@keriyu/MyNewProject";
+
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    // Chỉ dùng Web Client ID, giống login
+    clientId:
+      "666124679736-e500findu3suhjfjjd36f56v6qhphlab.apps.googleusercontent.com",
+    redirectUri,
+  });
+
+  useEffect(() => {
+    // Log kiểm tra URI, giống login
+    if (request) console.log("Redirect URI đang dùng:", request.redirectUri);
+
+    if (response?.type === "success") {
+      const { authentication } = response;
+      if (authentication?.accessToken) {
+        fetchUserInfo(authentication.accessToken);
+      }
+      showCrossPlatformAlert("Thành công", "Đăng ký Google thành công!");
+    }
+
+    if (response?.type === "error") {
+      console.error("Google auth error:", response.error);
+      showCrossPlatformAlert("Lỗi", "Đăng ký Google thất bại!");
+    }
+  }, [response, request]);
+
+  const fetchUserInfo = async (accessToken: string) => {
+    try {
+      const res = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const userInfo = await res.json();
+      if (userInfo.email) {
+        setForm((prev) => ({ ...prev, email: userInfo.email }));
+      }
+    } catch (error) {
+      console.error("Error fetching user info:", error);
+    }
+  };
+
+  const showCrossPlatformAlert = (title: string, message: string) => {
+    if (Platform.OS === "web") {
+      window.alert(`${title}\n${message}`);
+      return Promise.resolve(true);
+    }
+    return new Promise<boolean>((resolve) => {
+      Alert.alert(title, message, [
+        { text: "OK", onPress: () => resolve(true) },
+      ]);
+    });
+  };
+
   const validateEmail = (email: string) => {
     const trimmed = email.trim();
     if (trimmed === "") return "Vui lòng nhập email";
-    if (email.includes(" ")) return "Email không được chứa khoảng trắng";
-    if (email.startsWith(".") || email.endsWith("."))
-      return "Không được bắt đầu hoặc kết thúc bằng dấu chấm";
-    if (email.includes("..")) return "Không được có hai dấu chấm liên tiếp";
-    if (!email.includes("@")) return "Phải có ký tự @ (Ví dụ: user@gmail.com)";
-
-    const parts = email.split("@");
-    if (parts.length !== 2 || parts[1] === "")
-      return "Sau @ phải có tên miền (Ví dụ: user@gmail.com)";
-    if (!parts[1].includes("."))
-      return "Tên miền phải có dấu chấm (Ví dụ: gmail.com)";
-
-    return ""; 
-  };
-
-  const clearAllErrors = () => {
-    setErrors({ email: false, pass: false, confirmPass: false });
-    setEmailHint("");
+    if (!email.includes("@")) return "Phải có ký tự @";
+    return "";
   };
 
   const onRegisterPress = () => {
@@ -57,7 +97,6 @@ export const useRegister = () => {
 
     if (emailMsg !== "" || isPassEmpty || isConfirmError) return;
 
-    // Thông báo thành công đa nền tảng
     const title = AUTH_MESSAGES.registerSuccess.title;
     const body = AUTH_MESSAGES.registerSuccess.body;
 
@@ -76,7 +115,10 @@ export const useRegister = () => {
     setForm,
     errors,
     emailHint,
-    clearAllErrors,
+    clearAllErrors: () => {
+      setErrors({ email: false, pass: false, confirmPass: false });
+      setEmailHint("");
+    },
     showPass,
     setShowPass,
     showConfirm,
@@ -84,5 +126,7 @@ export const useRegister = () => {
     rememberPassword,
     setRememberPassword,
     onRegisterPress,
+    promptGoogleRegister: () => promptAsync(),
+    googleRequestDisabled: !request,
   };
 };

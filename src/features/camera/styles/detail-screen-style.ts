@@ -1,4 +1,5 @@
-import { StyleSheet } from "react-native";
+// src/features/camera/styles/detail-screen-style.ts
+import { Platform, StatusBar, StyleSheet } from "react-native";
 
 export const styles = StyleSheet.create({
   container: {
@@ -8,22 +9,27 @@ export const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 15,
-    paddingVertical: 15,
     backgroundColor: "#F9FCF9",
+    // Đẩy nội dung xuống dưới cam giọt nước
+    paddingTop:
+      Platform.OS === "android" ? (StatusBar.currentHeight || 0) + 15 : 55,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#EEE",
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: "700",
     color: "#333",
-    marginLeft: 10,
+    marginLeft: 15,
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingBottom: 50,
   },
   sectionContainer: {
-    marginTop: 25,
+    marginTop: 30,
   },
   badgeRow: {
     flexDirection: "row",
@@ -32,9 +38,9 @@ export const styles = StyleSheet.create({
   },
   numberBadge: {
     backgroundColor: "#ABE0AC",
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+    width: 34,
+    height: 34,
+    borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
@@ -53,19 +59,20 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFF",
-    borderRadius: 15,
-    padding: 12,
+    borderRadius: 18,
+    padding: 16,
     borderWidth: 1,
-    borderColor: "#EEE",
-    elevation: 2,
+    borderColor: "#F0F0F0",
+    elevation: 3,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 5,
   },
   diseaseNameText: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "600",
+    color: "#333",
     flex: 1,
   },
   arrowIcon: {
@@ -74,34 +81,39 @@ export const styles = StyleSheet.create({
   medicineItem: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-end",
-    paddingVertical: 15,
+    alignItems: "center",
+    paddingVertical: 18,
     borderBottomWidth: 1,
-    borderBottomColor: "#F0F0F0",
+    borderBottomColor: "#F5F5F5",
   },
   medTitle: {
     fontSize: 16,
-    fontWeight: "bold",
-    color: "#000",
+    fontWeight: "700",
+    color: "#333",
   },
   medSub: {
-    fontSize: 13,
-    color: "#666",
-    marginTop: 4,
+    fontSize: 14,
+    color: "#777",
+    marginTop: 5,
   },
   linkText: {
-    color: "#0000FF",
-    fontSize: 12,
-    fontStyle: "italic",
+    color: "#4C57A1",
+    fontSize: 13,
+    fontWeight: "600",
     textDecorationLine: "underline",
   },
   mainActionBtn: {
     backgroundColor: "#ABE0AC",
-    height: 55,
+    height: 60,
     borderRadius: 30,
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 40,
+    marginTop: 45,
+    shadowColor: "#ABE0AC",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   mainActionBtnText: {
     color: "white",

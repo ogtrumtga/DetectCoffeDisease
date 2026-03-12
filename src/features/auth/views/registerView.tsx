@@ -3,14 +3,14 @@ import { useRouter } from "expo-router";
 import { ChevronLeft, Eye, EyeOff, Mail } from "lucide-react-native";
 import React from "react";
 import {
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { Colors } from "../constants/Colors";
 import { authStyles as styles } from "../styles/auth.styles";
@@ -25,7 +25,7 @@ export default function RegisterScreen() {
     form,
     setForm,
     errors,
-    emailHint, // Lấy từ ViewModel
+    emailHint,
     clearAllErrors,
     showPass,
     setShowPass,
@@ -34,6 +34,8 @@ export default function RegisterScreen() {
     rememberPassword,
     setRememberPassword,
     onRegisterPress,
+    promptGoogleRegister,
+    googleRequestDisabled,
   } = useRegister();
 
   return (
@@ -69,7 +71,6 @@ export default function RegisterScreen() {
             />
             <Mail size={24} color="black" style={styles.iconRight} />
           </View>
-          {/* HIỂN THỊ LỖI EMAIL */}
           {errors.email && (
             <Text style={{ color: "red", fontSize: 12, marginBottom: 10 }}>
               {emailHint}
@@ -155,7 +156,15 @@ export default function RegisterScreen() {
             <Text style={styles.btnText}>Đăng ký</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.btnGoogle}>
+          {/* GOOGLE REGISTER */}
+          <TouchableOpacity
+            style={[
+              styles.btnGoogle,
+              googleRequestDisabled && { opacity: 0.5 },
+            ]}
+            onPress={() => promptGoogleRegister()}
+            disabled={googleRequestDisabled}
+          >
             <Image
               source={{ uri: GOOGLE_LOGO_URI }}
               style={styles.googleLogo}

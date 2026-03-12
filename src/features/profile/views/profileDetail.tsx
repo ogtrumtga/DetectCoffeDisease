@@ -21,6 +21,10 @@ export default function ProfileEditScreen() {
   const {
     user,
     setUser,
+    passwords,
+    setPasswords,
+    isChangingPassword,
+    setIsChangingPassword,
     loading,
     showMenu,
     setShowMenu,
@@ -64,7 +68,8 @@ export default function ProfileEditScreen() {
 
       {/* Avatar Section */}
       <View style={styles.avatarContainer}>
-        <TouchableOpacity style={styles.avatarBox} onPress={pickImage}>
+        {/* Box chứa ảnh được bo tròn và overflow hidden */}
+        <View style={styles.avatarBox}>
           {user.avatar ? (
             <Image
               source={{ uri: user.avatar }}
@@ -74,23 +79,15 @@ export default function ProfileEditScreen() {
           ) : (
             <Ionicons name="person" size={55} color="#A0A0A0" />
           )}
+        </View>
 
-          <View
-            style={{
-              position: "absolute",
-              bottom: 5,
-              right: 5,
-              backgroundColor: "#FFF",
-              borderRadius: 15,
-              padding: 5,
-              elevation: 3,
-              shadowColor: "#000",
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.2,
-            }}
-          >
-            <Ionicons name="camera" size={18} color="#4C57A1" />
-          </View>
+        {/* Nút camera nằm ngoài avatarBox để không bị cắt thành hình tròn */}
+        <TouchableOpacity
+          style={styles.cameraIconContainer}
+          onPress={pickImage}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="camera" size={20} color="#4C57A1" />
         </TouchableOpacity>
       </View>
 
@@ -126,6 +123,64 @@ export default function ProfileEditScreen() {
             />
             <Text style={styles.counterText}>{(user.bio || "").length}/50</Text>
           </View>
+
+          <Text style={styles.sectionTitle}>Mật khẩu</Text>
+
+          {!isChangingPassword ? (
+            <TouchableOpacity
+              style={styles.logoutBtn}
+              onPress={() => setIsChangingPassword(true)}
+            >
+              <Text style={[styles.logoutText, { color: "#4C57A1" }]}>
+                Đổi mật khẩu
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <>
+              <View style={styles.inputField}>
+                <Text style={styles.rightLabel}>Mật khẩu mới</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={passwords.newPass}
+                  secureTextEntry
+                  autoFocus
+                  placeholder="Nhập mật khẩu mới"
+                  placeholderTextColor="#DDD"
+                  onChangeText={(t) =>
+                    setPasswords({ ...passwords, newPass: t })
+                  }
+                />
+              </View>
+
+              <View style={styles.inputField}>
+                <Text style={styles.rightLabel}>Xác nhận mật khẩu</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={passwords.confirmPass}
+                  secureTextEntry
+                  onChangeText={(t) =>
+                    setPasswords({ ...passwords, confirmPass: t })
+                  }
+                />
+              </View>
+
+              <TouchableOpacity
+                onPress={() => {
+                  setIsChangingPassword(false);
+                  setPasswords({ newPass: "", confirmPass: "" });
+                }}
+              >
+                <Text
+                  style={[
+                    styles.counterText,
+                    { color: "#FF8A8A", textAlign: "left" },
+                  ]}
+                >
+                  Hủy đổi mật khẩu
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
 
           <Text style={styles.sectionTitle}>Tài khoản</Text>
           <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>

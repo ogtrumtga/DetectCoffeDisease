@@ -1,4 +1,5 @@
-import { StyleSheet } from "react-native";
+// src/features/camera/styles/confirm-screen-style.ts
+import { Platform, StatusBar, StyleSheet } from "react-native";
 
 export const styles = StyleSheet.create({
   container: {
@@ -7,8 +8,12 @@ export const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: "#2D3142",
-    paddingVertical: 20,
+    // Xử lý khoảng cách an toàn cho camera giọt nước/tai thỏ
+    paddingTop:
+      Platform.OS === "android" ? (StatusBar.currentHeight || 0) + 10 : 50,
+    paddingBottom: 20,
     alignItems: "center",
+    paddingHorizontal: 20,
   },
   headerTitle: {
     color: "white",
@@ -20,16 +25,20 @@ export const styles = StyleSheet.create({
     backgroundColor: "#1A1A1A",
     justifyContent: "center",
     alignItems: "center",
-    padding: 20,
   },
   image: {
     width: "100%",
     height: "100%",
-    borderRadius: 10,
   },
   content: {
-    padding: 30,
+    paddingHorizontal: 30,
+    paddingTop: 30,
+    paddingBottom: Platform.OS === "ios" ? 40 : 30, // Tránh thanh home bar
     alignItems: "center",
+    backgroundColor: "white",
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    marginTop: -30, // Tạo hiệu ứng đè lên ảnh
   },
   countdownContainer: {
     alignItems: "center",
@@ -55,20 +64,16 @@ export const styles = StyleSheet.create({
   },
   buttons: {
     flexDirection: "row",
-    // Chỉnh từ space-around sang space-between để giãn tối đa
     justifyContent: "space-between",
     width: "100%",
-    // Thêm padding ngang để nút không dính sát mép màn hình
-    paddingHorizontal: 10,
+    paddingHorizontal: 5,
   },
   button: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 20,
     paddingVertical: 15,
     borderRadius: 25,
-    // Chỉnh lại minWidth một chút để cân đối
-    minWidth: "46%",
+    minWidth: "47%",
     justifyContent: "center",
   },
   cancelButton: {
@@ -77,19 +82,17 @@ export const styles = StyleSheet.create({
     borderColor: "#E76F51",
   },
   cancelButtonText: {
-    marginLeft: 8,
     fontSize: 15,
     color: "#E76F51",
-    fontWeight: "500",
+    fontWeight: "600",
   },
   confirmButton: {
     backgroundColor: "#2A9D8F",
   },
   confirmButtonText: {
-    marginLeft: 8,
     fontSize: 15,
     color: "white",
-    fontWeight: "500",
+    fontWeight: "600",
   },
   loadingContainer: {
     alignItems: "center",
@@ -101,9 +104,5 @@ export const styles = StyleSheet.create({
     color: "#2D3142",
     marginTop: 20,
     marginBottom: 10,
-  },
-  loadingSubtext: {
-    fontSize: 14,
-    color: "#666",
   },
 });
