@@ -9,6 +9,7 @@ export default function CameraLayout() {
       <Stack.Screen name="confirmScreen" />
       <Stack.Screen name="resultScreen" />
       <Stack.Screen name="detailCameraScreen" />
+      <Stack.Screen name="feedbackScreen" />
     </Stack>
   );
 }

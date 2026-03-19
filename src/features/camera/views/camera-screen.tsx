@@ -3,13 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { CameraView } from "expo-camera";
 import { router } from "expo-router";
 import React from "react";
-import {
-  Image,
-  Text,
-  TouchableOpacity,
-  View,
-  StatusBar,
-} from "react-native";
+import { Image, StatusBar, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { styles } from "../styles/camera-screen-style";
@@ -31,12 +25,19 @@ export default function CameraScreen() {
     toggleFacing,
   } = useCameraScreenVM();
 
-  if (!permission) return <View style={{ flex: 1, backgroundColor: '#000' }} />;
+  if (!permission) return <View style={{ flex: 1, backgroundColor: "#000" }} />;
 
   if (!permission.granted) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', paddingHorizontal: 40 }]}>
-        <Text style={styles.message}>Chúng tôi cần quyền truy cập camera để thực hiện chẩn đoán.</Text>
+      <View
+        style={[
+          styles.container,
+          { justifyContent: "center", paddingHorizontal: 40 },
+        ]}
+      >
+        <Text style={styles.message}>
+          Chúng tôi cần quyền truy cập camera để thực hiện chẩn đoán.
+        </Text>
         <TouchableOpacity style={styles.button} onPress={requestPermission}>
           <Text style={styles.buttonText}>CHO PHÉP TRUY CẬP</Text>
         </TouchableOpacity>
@@ -46,17 +47,21 @@ export default function CameraScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      
+      <StatusBar
+        barStyle="light-content"
+        translucent
+        backgroundColor="transparent"
+      />
+
       {/* Header với Dynamic Padding Top */}
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backButton}
         >
-          <Ionicons name="arrow-back" size={26} color="white" />
+          <Ionicons name="chevron-back" size={26} color="#ABE0AC" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Chụp ảnh chẩn đoán</Text>
+        <Text style={styles.headerTitle}>CHỤP ẢNH</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -90,9 +95,9 @@ export default function CameraScreen() {
         {!isPreview ? (
           <>
             <TouchableOpacity style={styles.controlButton} onPress={pickImage}>
-              <Ionicons name="images-outline" size={32} color="white" />
+              <Ionicons name="images-outline" size={32} color="#ABE0AC" />
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               style={styles.captureButton}
               onPress={takePicture}
@@ -104,7 +109,7 @@ export default function CameraScreen() {
               style={styles.controlButton}
               onPress={toggleFacing}
             >
-              <Ionicons name="camera-reverse-outline" size={32} color="white" />
+              <Ionicons name="camera-reverse-outline" size={32} color="#ABE0AC" />
             </TouchableOpacity>
           </>
         ) : (
@@ -116,7 +121,7 @@ export default function CameraScreen() {
               <Ionicons name="refresh" size={24} color="#333" />
               <Text style={styles.previewButtonText}>Chụp lại</Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               style={styles.confirmButton}
               onPress={confirmPicture}

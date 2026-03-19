@@ -9,8 +9,7 @@ export const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F9FCF9",
-    // Đẩy nội dung xuống dưới cam giọt nước
+    backgroundColor: "rgb(255, 255, 255)",
     paddingTop:
       Platform.OS === "android" ? (StatusBar.currentHeight || 0) + 15 : 55,
     paddingHorizontal: 20,
@@ -19,9 +18,9 @@ export const styles = StyleSheet.create({
     borderBottomColor: "#EEE",
   },
   headerTitle: {
-    fontSize: 19,
+    fontSize: 25,
     fontWeight: "700",
-    color: "#333",
+    color: "#ABE0AC",
     marginLeft: 15,
   },
   scrollContent: {
@@ -108,7 +107,7 @@ export const styles = StyleSheet.create({
     borderRadius: 30,
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 45,
+    // marginTop: 45,
     shadowColor: "#ABE0AC",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -120,4 +119,5 @@ export const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
   },
+  
 });

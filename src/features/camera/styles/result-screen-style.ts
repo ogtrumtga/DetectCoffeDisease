@@ -10,7 +10,7 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#2D3142",
+    backgroundColor: "#ffffff",
     // Tránh camera giọt nước
     paddingTop:
       Platform.OS === "android" ? (StatusBar.currentHeight || 0) + 15 : 55,
@@ -21,8 +21,8 @@ export const styles = StyleSheet.create({
     padding: 5,
   },
   headerTitle: {
-    color: "white",
-    fontSize: 18,
+    color: "#ABE0AC",
+    fontSize: 25,
     fontWeight: "600",
   },
   scrollContent: {

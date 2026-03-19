@@ -11,10 +11,10 @@ export const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingBottom: 15,
-    backgroundColor: "#2D3142",
+    backgroundColor: "#ffffff",
     // Padding top sẽ được xử lý động trong View bằng useSafeAreaInsets
   },
-  headerTitle: { color: "white", fontSize: 18, fontWeight: "600" },
+  headerTitle: { color: "#ABE0AC", fontSize: 25, fontWeight: "600" },
   backButton: { padding: 5 },
   cameraContainer: { flex: 1 },
   camera: { flex: 1 },
@@ -81,7 +81,7 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     paddingTop: 20,
     // Padding bottom sẽ được xử lý bằng insets.bottom
-    backgroundColor: "#2D3142",
+    backgroundColor: "#ffffff",
   },
   controlButton: { padding: 15 },
   captureButton: {
@@ -103,7 +103,7 @@ export const styles = StyleSheet.create({
   previewButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "white",
+    backgroundColor: "#ABE0AC",
     paddingHorizontal: 25,
     paddingVertical: 12,
     borderRadius: 25,

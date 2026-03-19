@@ -1,5 +1,4 @@
 // src/features/camera/views/confirm-screen.tsx
-import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
   ActivityIndicator,
@@ -20,7 +19,7 @@ export default function ConfirmScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Xác nhận ảnh</Text>
+        <Text style={styles.headerTitle}>XÁC NHẬN ẢNH</Text>
       </View>
 
       <View style={styles.imageContainer}>
@@ -38,6 +37,7 @@ export default function ConfirmScreen() {
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#2A9D8F" />
             <Text style={styles.loadingText}>AI đang phân tích...</Text>
+            {/* Lỗi loadingSubtext sẽ biến mất sau khi bạn cập nhật file style ở bước 2 */}
             <Text style={styles.loadingSubtext}>
               Vui lòng đợi trong giây lát
             </Text>
@@ -56,7 +56,6 @@ export default function ConfirmScreen() {
                 style={[styles.button, styles.cancelButton]}
                 onPress={cancelAnalysis}
               >
-                {/* <Ionicons name="close-circle" size={24} color="#E76F51" /> */}
                 <Text style={styles.cancelButtonText}>Hủy</Text>
               </TouchableOpacity>
 
@@ -64,7 +63,6 @@ export default function ConfirmScreen() {
                 style={[styles.button, styles.confirmButton]}
                 onPress={startAnalysis}
               >
-                {/* <Ionicons name="play-circle" size={24} color="white" /> */}
                 <Text style={styles.confirmButtonText}>Phân tích ngay</Text>
               </TouchableOpacity>
             </View>

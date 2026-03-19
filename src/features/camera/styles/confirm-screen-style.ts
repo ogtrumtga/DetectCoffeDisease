@@ -7,7 +7,7 @@ export const styles = StyleSheet.create({
     backgroundColor: "#F8F9FA",
   },
   header: {
-    backgroundColor: "#2D3142",
+    backgroundColor: "#ffffff",
     // Xử lý khoảng cách an toàn cho camera giọt nước/tai thỏ
     paddingTop:
       Platform.OS === "android" ? (StatusBar.currentHeight || 0) + 10 : 50,
@@ -104,5 +104,11 @@ export const styles = StyleSheet.create({
     color: "#2D3142",
     marginTop: 20,
     marginBottom: 10,
+  },
+  loadingSubtext: {
+    fontSize: 14,
+    color: "#666",
+    marginTop: 5,
+    textAlign: "center",
   },
 });

@@ -39,9 +39,9 @@ export default function ResultScreen() {
             onPress={handleBackToCameraIndex}
             style={styles.backButton}
           >
-            <Ionicons name="arrow-back" size={24} color="white" />
+            <Ionicons name="chevron-back" size={24} color="#ABE0AC" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Kết quả chẩn đoán</Text>
+          <Text style={styles.headerTitle}>KẾT QUẢ CHUẨN ĐOÁN</Text>
           <View style={{ width: 40 }} />
         </View>
 
