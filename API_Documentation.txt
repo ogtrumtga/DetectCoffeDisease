@@ -1,0 +1,693 @@
+================================================================================
+                        TÀI LIỆU API ENDPOINTS
+================================================================================
+
+================================================================================
+1. AUTH API - Xác thực và Quản lý Phiên
+================================================================================
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ API: Đăng nhập                                                               │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Endpoint:     POST /api/auth/login                                           │
+│ Tên hàm:      login_user()                                                   │
+│ Công dụng:    Đăng nhập user, trả về access/refresh token                   │
+│ Header:       Content-Type: application/json                                 │
+│ Đầu vào:      {                                                              │
+│                 "email": "string",                                           │
+│                 "password": "string"                                         │
+│               }                                                              │
+│ Đầu ra:       {                                                              │
+│                 "access_token": "string",                                    │
+│                 "refresh_token": "string",                                   │
+│                 "user": { "id": "string", "email": "string", ... }          │
+│               }                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ API: Đăng ký tài khoản                                                       │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Endpoint:     POST /api/auth/register                                        │
+│ Tên hàm:      register_user()                                                │
+│ Công dụng:    Đăng ký tài khoản mới                                         │
+│ Header:       Content-Type: application/json                                 │
+│ Đầu vào:      {                                                              │
+│                 "email": "string",                                           │
+│                 "password": "string",                                        │
+│                 "name": "string"                                             │
+│               }                                                              │
+│ Đầu ra:       {                                                              │
+│                 "message": "Registration successful",                        │
+│                 "user_id": "string"                                          │
+│               }                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ API: Đăng xuất                                                               │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Endpoint:     POST /api/auth/logout                                          │
+│ Tên hàm:      logout_user()                                                  │
+│ Công dụng:    Đăng xuất, vô hiệu hóa refresh token hiện tại                 │
+│ Header:       Authorization: Bearer {access_token}                           │
+│ Đầu vào:      {}                                                             │
+│ Đầu ra:       {                                                              │
+│                 "message": "Logout successful"                               │
+│               }                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ API: Làm mới access token                                                    │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Endpoint:     POST /api/auth/refresh                                         │
+│ Tên hàm:      refresh_access_token()                                         │
+│ Công dụng:    Làm mới access token từ refresh token hợp lệ                  │
+│ Header:       Content-Type: application/json                                 │
+│ Đầu vào:      {                                                              │
+│                 "refresh_token": "string"                                    │
+│               }                                                              │
+│ Đầu ra:       {                                                              │
+│                 "access_token": "string"                                     │
+│               }                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ API: Lấy thông tin user hiện tại                                            │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Endpoint:     GET /api/auth/me                                               │
+│ Tên hàm:      get_current_user()                                             │
+│ Công dụng:    Lấy thông tin user hiện tại từ access token                   │
+│ Header:       Authorization: Bearer {access_token}                           │
+│ Đầu vào:      N/A (query params)                                             │
+│ Đầu ra:       {                                                              │
+│                 "id": "string",                                              │
+│                 "email": "string",                                           │
+│                 "name": "string",                                            │
+│                 "avatar": "string"                                           │
+│               }                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+
+================================================================================
+2. USER/PROFILE API - Quản lý Thông tin Cá nhân
+================================================================================
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ API: Lấy thông tin profile                                                   │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Endpoint:     GET /api/users/me                                              │
+│ Tên hàm:      get_my_profile()                                               │
+│ Công dụng:    Lấy thông tin profile của user hiện tại                       │
+│ Header:       Authorization: Bearer {access_token}                           │
+│ Đầu vào:      N/A (query params)                                             │
+│ Đầu ra:       {                                                              │
+│                 "id": "string",                                              │
+│                 "email": "string",                                           │
+│                 "name": "string",                                            │
+│                 "bio": "string",                                             │
+│                 "avatar": "string",                                          │
+│                 "created_at": "timestamp"                                    │
+│               }                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ API: Cập nhật thông tin profile                                             │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Endpoint:     PUT /api/users/me                                              │
+│ Tên hàm:      update_my_profile()                                            │
+│ Công dụng:    Cập nhật thông tin cá nhân (tên, bio, ...)                    │
+│ Header:       Authorization: Bearer {access_token}                           │
+│               Content-Type: application/json                                 │
+│ Đầu vào:      {                                                              │
+│                 "name": "string",                                            │
+│                 "bio": "string"                                              │
+│               }                                                              │
+│ Đầu ra:       {                                                              │
+│                 "message": "Profile updated successfully",                   │
+│                 "user": { ... }                                              │
+│               }                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ API: Cập nhật ảnh đại diện                                                   │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Endpoint:     PUT /api/users/me/avatar                                       │
+│ Tên hàm:      update_my_avatar()                                             │
+│ Công dụng:    Cập nhật ảnh đại diện user                                    │
+│ Header:       Authorization: Bearer {access_token}                           │
+│               Content-Type: multipart/form-data                              │
+│ Đầu vào:      {                                                              │
+│                 "avatar": "file (image)"                                     │
+│               }                                                              │
+│ Đầu ra:       {                                                              │
+│                 "message": "Avatar updated successfully",                    │
+│                 "avatar_url": "string"                                       │
+│               }                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ API: Xóa tài khoản                                                           │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Endpoint:     DELETE /api/users/me                                           │
+│ Tên hàm:      delete_my_account()                                            │
+│ Công dụng:    Xóa tài khoản hiện tại                                        │
+│ Header:       Authorization: Bearer {access_token}                           │
+│ Đầu vào:      {}                                                             │
+│ Đầu ra:       {                                                              │
+│                 "message": "Account deleted successfully"                    │
+│               }                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ API: Đổi mật khẩu                                                            │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Endpoint:     PATCH /api/users/me/password                                   │
+│ Tên hàm:      change_my_password()                                           │
+│ Công dụng:    Đổi mật khẩu tài khoản hiện tại                               │
+│ Header:       Authorization: Bearer {access_token}                           │
+│               Content-Type: application/json                                 │
+│ Đầu vào:      {                                                              │
+│                 "old_password": "string",                                    │
+│                 "new_password": "string"                                     │
+│               }                                                              │
+│ Đầu ra:       {                                                              │
+│                 "message": "Password changed successfully"                   │
+│               }                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+
+================================================================================
+3. COMMUNITY API - Quản lý Bài đăng và Hoạt động Cộng đồng
+================================================================================
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ API: Lấy danh sách bài đăng                                                 │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Endpoint:     GET /api/posts                                                 │
+│ Tên hàm:      get_posts()                                                    │
+│ Công dụng:    Lấy danh sách bài đăng (feed cộng đồng, có phân trang)       │
+│ Header:       Authorization: Bearer {access_token}                           │
+│ Đầu vào:      Query params: ?page=1&limit=20                                │
+│ Đầu ra:       {                                                              │
+│                 "posts": [                                                   │
+│                   {                                                          │
+│                     "id": "string",                                          │
+│                     "title": "string",                                       │
+│                     "content": "string",                                     │
+│                     "author": { ... },                                       │
+│                     "likes_count": "number",                                 │
+│                     "comments_count": "number",                              │
+│                     "created_at": "timestamp"                                │
+│                   }                                                          │
+│                 ],                                                           │
+│                 "total": "number",                                           │
+│                 "page": "number"                                             │
+│               }                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ API: Tạo bài đăng mới                                                       │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Endpoint:     POST /api/posts                                                │
+│ Tên hàm:      create_post()                                                  │
+│ Công dụng:    Tạo bài đăng mới (tiêu đề, nội dung, ảnh, tag...)            │
+│ Header:       Authorization: Bearer {access_token}                           │
+│               Content-Type: application/json                                 │
+│ Đầu vào:      {                                                              │
+│                 "title": "string",                                           │
+│                 "content": "string",                                         │
+│                 "images": ["string"],                                        │
+│                 "tags": ["string"]                                           │
+│               }                                                              │
+│ Đầu ra:       {                                                              │
+│                 "message": "Post created successfully",                      │
+│                 "post_id": "string",                                         │
+│                 "post": { ... }                                              │
+│               }                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ API: Lấy chi tiết bài đăng                                                  │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Endpoint:     GET /api/posts/{id}                                            │
+│ Tên hàm:      get_post_detail()                                              │
+│ Công dụng:    Lấy chi tiết một bài đăng theo id                             │
+│ Header:       Authorization: Bearer {access_token}                           │
+│ Đầu vào:      Path param: {id}                                               │
+│ Đầu ra:       {                                                              │
+│                 "id": "string",                                              │
+│                 "title": "string",                                           │
+│                 "content": "string",                                         │
+│                 "images": ["string"],                                        │
+│                 "author": { ... },                                           │
+│                 "likes_count": "number",                                     │
+│                 "comments_count": "number",                                  │
+│                 "is_liked": "boolean",                                       │
+│                 "created_at": "timestamp"                                    │
+│               }                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ API: Xóa bài đăng                                                           │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Endpoint:     DELETE /api/posts/{id}                                         │
+│ Tên hàm:      delete_post()                                                  │
+│ Công dụng:    Xóa bài đăng của user hiện tại                                │
+│ Header:       Authorization: Bearer {access_token}                           │
+│ Đầu vào:      Path param: {id}                                               │
+│ Đầu ra:       {                                                              │
+│                 "message": "Post deleted successfully"                       │
+│               }                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ API: Like/Unlike bài đăng                                                   │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Endpoint:     POST /api/posts/{id}/like                                      │
+│               DELETE /api/posts/{id}/like                                    │
+│ Tên hàm:      toggle_post_like()                                             │
+│ Công dụng:    Like hoặc bỏ like một bài đăng (toggle)                       │
+│ Header:       Authorization: Bearer {access_token}                           │
+│ Đầu vào:      Path param: {id}                                               │
+│ Đầu ra:       {                                                              │
+│                 "message": "Post liked/unliked",                             │
+│                 "is_liked": "boolean",                                       │
+│                 "likes_count": "number"                                      │
+│               }                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ API: Thêm comment vào bài đăng                                              │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Endpoint:     POST /api/posts/{id}/comment                                   │
+│ Tên hàm:      add_comment_to_post()                                          │
+│ Công dụng:    Thêm comment mới vào bài đăng                                 │
+│ Header:       Authorization: Bearer {access_token}                           │
+│               Content-Type: application/json                                 │
+│ Đầu vào:      Path param: {id}                                               │
+│               Body: {                                                        │
+│                 "content": "string"                                          │
+│               }                                                              │
+│ Đầu ra:       {                                                              │
+│                 "message": "Comment added successfully",                     │
+│                 "comment": {                                                 │
+│                   "id": "string",                                            │
+│                   "content": "string",                                       │
+│                   "author": { ... },                                         │
+│                   "created_at": "timestamp"                                  │
+│                 }                                                            │
+│               }                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ API: Lấy danh sách comment                                                  │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Endpoint:     GET /api/posts/{id}/comments                                   │
+│ Tên hàm:      get_comments_of_post()                                         │
+│ Công dụng:    Lấy danh sách comment của một bài đăng                        │
+│ Header:       Authorization: Bearer {access_token}                           │
+│ Đầu vào:      Path param: {id}                                               │
+│               Query params: ?page=1&limit=20                                 │
+│ Đầu ra:       {                                                              │
+│                 "comments": [                                                │
+│                   {                                                          │
+│                     "id": "string",                                          │
+│                     "content": "string",                                     │
+│                     "author": { ... },                                       │
+│                     "created_at": "timestamp"                                │
+│                   }                                                          │
+│                 ],                                                           │
+│                 "total": "number"                                            │
+│               }                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ API: Tìm kiếm bài đăng                                                      │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Endpoint:     GET /api/posts/search                                          │
+│ Tên hàm:      search_posts()                                                 │
+│ Công dụng:    Tìm kiếm bài đăng theo từ khóa (tiêu đề/nội dung)            │
+│ Header:       Authorization: Bearer {access_token}                           │
+│ Đầu vào:      Query params: ?q=keyword&page=1&limit=20                      │
+│ Đầu ra:       {                                                              │
+│                 "posts": [ ... ],                                            │
+│                 "total": "number",                                           │
+│                 "query": "string"                                            │
+│               }                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+
+================================================================================
+4. DIAGNOSIS API - Chẩn đoán Bệnh Cà phê
+================================================================================
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ API: Chẩn đoán bệnh từ ảnh                                                  │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Endpoint:     POST /api/diagnosis/predict                                    │
+│ Tên hàm:      predict_disease_from_image()                                   │
+│ Công dụng:    Nhận ảnh lá cà phê, trả về kết quả chẩn đoán bệnh            │
+│ Header:       Authorization: Bearer {access_token}                           │
+│               Content-Type: multipart/form-data                              │
+│ Đầu vào:      {                                                              │
+│                 "image": "file (image)"                                      │
+│               }                                                              │
+│ Đầu ra:       {                                                              │
+│                 "diagnosis_id": "string",                                    │
+│                 "disease": "string",                                         │
+│                 "confidence": "number",                                      │
+│                 "description": "string",                                     │
+│                 "treatment": "string",                                       │
+│                 "image_url": "string",                                       │
+│                 "created_at": "timestamp"                                    │
+│               }                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ API: Lấy chi tiết kết quả chẩn đoán                                        │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Endpoint:     GET /api/diagnosis/{id}                                        │
+│ Tên hàm:      get_diagnosis_detail()                                         │
+│ Công dụng:    Lấy chi tiết một kết quả chẩn đoán (theo id)                 │
+│ Header:       Authorization: Bearer {access_token}                           │
+│ Đầu vào:      Path param: {id}                                               │
+│ Đầu ra:       {                                                              │
+│                 "id": "string",                                              │
+│                 "disease": "string",                                         │
+│                 "confidence": "number",                                      │
+│                 "description": "string",                                     │
+│                 "treatment": "string",                                       │
+│                 "image_url": "string",                                       │
+│                 "created_at": "timestamp"                                    │
+│               }                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ API: Danh sách bệnh được hỗ trợ                                            │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Endpoint:     GET /api/diagnosis/diseases                                    │
+│ Tên hàm:      list_supported_diseases()                                      │
+│ Công dụng:    Danh sách các loại bệnh cà phê mà model hỗ trợ               │
+│ Header:       Authorization: Bearer {access_token}                           │
+│ Đầu vào:      N/A (query params)                                             │
+│ Đầu ra:       {                                                              │
+│                 "diseases": [                                                │
+│                   {                                                          │
+│                     "name": "string",                                        │
+│                     "description": "string",                                 │
+│                     "symptoms": ["string"]                                   │
+│                   }                                                          │
+│                 ]                                                            │
+│               }                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ API: Upload ảnh gốc                                                         │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Endpoint:     POST /api/diagnosis/upload-image                               │
+│ Tên hàm:      upload_raw_image()                                             │
+│ Công dụng:    Upload ảnh gốc, trả về thông tin file (URL/id) để chẩn đoán │
+│ Header:       Authorization: Bearer {access_token}                           │
+│               Content-Type: multipart/form-data                              │
+│ Đầu vào:      {                                                              │
+│                 "image": "file (image)"                                      │
+│               }                                                              │
+│ Đầu ra:       {                                                              │
+│                 "image_id": "string",                                        │
+│                 "image_url": "string",                                       │
+│                 "uploaded_at": "timestamp"                                   │
+│               }                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+
+================================================================================
+5. HISTORY API - Quản lý Lịch sử Chẩn đoán
+================================================================================
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ API: Lấy danh sách lịch sử                                                 │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Endpoint:     GET /api/history                                               │
+│ Tên hàm:      list_user_histories()                                          │
+│ Công dụng:    Lấy danh sách lịch sử chẩn đoán của user (có phân trang)     │
+│ Header:       Authorization: Bearer {access_token}                           │
+│ Đầu vào:      Query params: ?page=1&limit=20                                │
+│ Đầu ra:       {                                                              │
+│                 "histories": [                                               │
+│                   {                                                          │
+│                     "id": "string",                                          │
+│                     "disease": "string",                                     │
+│                     "confidence": "number",                                  │
+│                     "image_url": "string",                                   │
+│                     "created_at": "timestamp"                                │
+│                   }                                                          │
+│                 ],                                                           │
+│                 "total": "number",                                           │
+│                 "page": "number"                                             │
+│               }                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ API: Lấy chi tiết lịch sử                                                  │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Endpoint:     GET /api/history/{id}                                          │
+│ Tên hàm:      get_history_detail()                                           │
+│ Công dụng:    Lấy chi tiết một bản ghi lịch sử chẩn đoán                   │
+│ Header:       Authorization: Bearer {access_token}                           │
+│ Đầu vào:      Path param: {id}                                               │
+│ Đầu ra:       {                                                              │
+│                 "id": "string",                                              │
+│                 "disease": "string",                                         │
+│                 "confidence": "number",                                      │
+│                 "description": "string",                                     │
+│                 "treatment": "string",                                       │
+│                 "image_url": "string",                                       │
+│                 "created_at": "timestamp"                                    │
+│               }                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ API: Tạo bản ghi lịch sử                                                   │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Endpoint:     POST /api/history                                              │
+│ Tên hàm:      create_history_entry()                                         │
+│ Công dụng:    Tạo mới bản ghi lịch sử chẩn đoán sau khi model trả kết quả │
+│ Header:       Authorization: Bearer {access_token}                           │
+│               Content-Type: application/json                                 │
+│ Đầu vào:      {                                                              │
+│                 "diagnosis_id": "string",                                    │
+│                 "disease": "string",                                         │
+│                 "confidence": "number",                                      │
+│                 "image_url": "string"                                        │
+│               }                                                              │
+│ Đầu ra:       {                                                              │
+│                 "message": "History entry created",                          │
+│                 "history_id": "string"                                       │
+│               }                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ API: Xóa một bản ghi lịch sử                                               │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Endpoint:     DELETE /api/history/{id}                                       │
+│ Tên hàm:      delete_history_entry()                                         │
+│ Công dụng:    Xóa một bản ghi lịch sử chẩn đoán theo id                    │
+│ Header:       Authorization: Bearer {access_token}                           │
+│ Đầu vào:      Path param: {id}                                               │
+│ Đầu ra:       {                                                              │
+│                 "message": "History entry deleted"                           │
+│               }                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ API: Xóa toàn bộ lịch sử                                                   │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Endpoint:     DELETE /api/history                                            │
+│ Tên hàm:      clear_all_histories()                                          │
+│ Công dụng:    Xóa toàn bộ lịch sử chẩn đoán của user                       │
+│ Header:       Authorization: Bearer {access_token}                           │
+│ Đầu vào:      {}                                                             │
+│ Đầu ra:       {                                                              │
+│                 "message": "All histories cleared",                          │
+│                 "deleted_count": "number"                                    │
+│               }                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+
+================================================================================
+6. NOTIFICATION API - Quản lý Thông báo
+================================================================================
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ API: Lấy danh sách thông báo                                               │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Endpoint:     GET /api/notifications                                         │
+│ Tên hàm:      list_notifications()                                           │
+│ Công dụng:    Lấy danh sách thông báo của user hiện tại                    │
+│ Header:       Authorization: Bearer {access_token}                           │
+│ Đầu vào:      Query params: ?page=1&limit=20                                │
+│ Đầu ra:       {                                                              │
+│                 "notifications": [                                           │
+│                   {                                                          │
+│                     "id": "string",                                          │
+│                     "type": "string",                                        │
+│                     "title": "string",                                       │
+│                     "message": "string",                                     │
+│                     "is_read": "boolean",                                    │
+│                     "created_at": "timestamp"                                │
+│                   }                                                          │
+│                 ],                                                           │
+│                 "unread_count": "number",                                    │
+│                 "total": "number"                                            │
+│               }                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ API: Đánh dấu thông báo đã đọc                                             │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Endpoint:     POST /api/notifications/{id}/read                              │
+│ Tên hàm:      mark_notification_read()                                       │
+│ Công dụng:    Đánh dấu một thông báo là đã đọc                             │
+│ Header:       Authorization: Bearer {access_token}                           │
+│ Đầu vào:      Path param: {id}                                               │
+│ Đầu ra:       {                                                              │
+│                 "message": "Notification marked as read"                     │
+│               }                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ API: Đánh dấu tất cả thông báo đã đọc                                      │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Endpoint:     POST /api/notifications/mark-all-read                          │
+│ Tên hàm:      mark_all_notifications_read()                                  │
+│ Công dụng:    Đánh dấu tất cả thông báo là đã đọc                          │
+│ Header:       Authorization: Bearer {access_token}                           │
+│ Đầu vào:      {}                                                             │
+│ Đầu ra:       {                                                              │
+│                 "message": "All notifications marked as read",               │
+│                 "updated_count": "number"                                    │
+│               }                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+
+================================================================================
+7. WEATHER API - Thông tin Thời tiết và Gợi ý Phun thuốc
+================================================================================
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ API: Lấy thời tiết theo tọa độ                                             │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Endpoint:     GET /api/weather/coords                                        │
+│ Tên hàm:      get_weather_by_coords()                                        │
+│ Công dụng:    Lấy thông tin thời tiết theo toạ độ (lat, lon)               │
+│ Header:       Authorization: Bearer {access_token}                           │
+│ Đầu vào:      Query params: ?lat=10.762622&lon=106.660172                   │
+│ Đầu ra:       {                                                              │
+│                 "location": {                                                │
+│                   "lat": "number",                                           │
+│                   "lon": "number",                                           │
+│                   "name": "string"                                           │
+│                 },                                                           │
+│                 "current": {                                                 │
+│                   "temp": "number",                                          │
+│                   "humidity": "number",                                      │
+│                   "wind_speed": "number",                                    │
+│                   "description": "string",                                   │
+│                   "icon": "string"                                           │
+│                 },                                                           │
+│                 "forecast": [ ... ]                                          │
+│               }                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ API: Lấy thời tiết theo tên thành phố                                      │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Endpoint:     GET /api/weather/city                                          │
+│ Tên hàm:      get_weather_by_city_name()                                     │
+│ Công dụng:    Lấy thông tin thời tiết theo tên thành phố / địa điểm        │
+│ Header:       Authorization: Bearer {access_token}                           │
+│ Đầu vào:      Query params: ?name=Ho Chi Minh City                          │
+│ Đầu ra:       {                                                              │
+│                 "location": {                                                │
+│                   "name": "string",                                          │
+│                   "country": "string"                                        │
+│                 },                                                           │
+│                 "current": {                                                 │
+│                   "temp": "number",                                          │
+│                   "humidity": "number",                                      │
+│                   "wind_speed": "number",                                    │
+│                   "description": "string"                                    │
+│                 },                                                           │
+│                 "forecast": [ ... ]                                          │
+│               }                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ API: Gợi ý thời điểm phun thuốc                                            │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Endpoint:     GET /api/weather/spray-time                                    │
+│ Tên hàm:      get_spray_time_recommendation()                                │
+│ Công dụng:    Gợi ý thời điểm phun thuốc dựa trên dự báo thời tiết        │
+│ Header:       Authorization: Bearer {access_token}                           │
+│ Đầu vào:      Query params: ?lat=10.762622&lon=106.660172                   │
+│ Đầu ra:       {                                                              │
+│                 "recommended_times": [                                       │
+│                   {                                                          │
+│                     "date": "string",                                        │
+│                     "time": "string",                                        │
+│                     "suitability": "string (good/fair/poor)",                │
+│                     "reason": "string"                                       │
+│                   }                                                          │
+│                 ],                                                           │
+│                 "best_time": {                                               │
+│                   "date": "string",                                          │
+│                   "time": "string"                                           │
+│                 }                                                            │
+│               }                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ API: Giải thích quy tắc phun thuốc                                         │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Endpoint:     GET /api/weather/spray-rule-explain                            │
+│ Tên hàm:      get_spray_rule_explanation()                                   │
+│ Công dụng:    Giải thích lý do nên/không nên phun thuốc tại thời điểm     │
+│ Header:       Authorization: Bearer {access_token}                           │
+│ Đầu vào:      Query params: ?date=2026-03-17&time=06:00                     │
+│ Đầu ra:       {                                                              │
+│                 "date": "string",                                            │
+│                 "time": "string",                                            │
+│                 "weather_conditions": {                                      │
+│                   "temp": "number",                                          │
+│                   "humidity": "number",                                      │
+│                   "wind_speed": "number",                                    │
+│                   "rain_probability": "number"                               │
+│                 },                                                           │
+│                 "recommendation": "string (recommended/not_recommended)",    │
+│                 "explanation": "string",                                     │
+│                 "tips": ["string"]                                           │
+│               }                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+
+================================================================================
+                            KẾT THÚC TÀI LIỆU
+================================================================================
+
+Tổng số API: 37 endpoints
+- Auth API: 5 endpoints
+- User/Profile API: 5 endpoints
+- Community API: 8 endpoints
+- Diagnosis API: 4 endpoints
+- History API: 5 endpoints
+- Notification API: 3 endpoints
+- Weather API: 4 endpoints
+
+Ghi chú:
+- Tất cả các API yêu cầu xác thực (trừ login/register) đều cần header:
+  Authorization: Bearer {access_token}
+- Các API upload file cần header: Content-Type: multipart/form-data
+- Các API gửi JSON cần header: Content-Type: application/json
+- Phân trang mặc định: page=1, limit=20
+- Timestamp format: ISO 8601 (YYYY-MM-DDTHH:mm:ss.sssZ)
+
+================================================================================
