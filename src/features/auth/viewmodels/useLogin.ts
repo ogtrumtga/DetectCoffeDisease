@@ -1,9 +1,10 @@
 // src/features/auth/viewmodels/useLogin.ts
-import * as AuthSession from "expo-auth-session";
 import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
+import { signInWithEmailAndPassword } from "firebase/auth";
 import { useEffect, useState } from "react";
 import { Alert, Platform } from "react-native";
+import { auth } from "../../../../config/firebase";
 import { AUTH_MESSAGES } from "../constants/auth.messages";
 
 WebBrowser.maybeCompleteAuthSession();
@@ -93,16 +94,21 @@ export const useLogin = () => {
 
     try {
       setLoading(true);
-      if (email === "chataococup@6cai.com" && password === "123456") {
-        await showCrossPlatformAlert(
-          AUTH_MESSAGES.loginSuccess.title,
-          AUTH_MESSAGES.loginSuccess.body,
-        );
-        return true;
-      } else {
-        setErrorMessage(AUTH_MESSAGES.loginError);
-        return false;
-      }
+      await signInWithEmailAndPassword(auth, email.trim(), password);
+      await showCrossPlatformAlert(
+        AUTH_MESSAGES.loginSuccess.title,
+        AUTH_MESSAGES.loginSuccess.body,
+      );
+      return true;
+    } catch (error: any) {
+      const msg =
+        error.code === "auth/invalid-credential" ||
+        error.code === "auth/wrong-password" ||
+        error.code === "auth/user-not-found"
+          ? AUTH_MESSAGES.loginError
+          : error.message;
+      setErrorMessage(msg);
+      return false;
     } finally {
       setLoading(false);
     }

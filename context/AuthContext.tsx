@@ -1,35 +1,42 @@
+import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { auth } from "../config/firebase";
 
-// 1. Thêm isLoading vào định nghĩa ban đầu
-const AuthContext = createContext({
+interface AuthContextType {
+  user: User | null;
+  isLoggedIn: boolean;
+  isLoading: boolean;
+  logout: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType>({
+  user: null,
   isLoggedIn: false,
-  isLoading: true, // Thêm dòng này
-  login: () => {},
-  logout: () => {},
+  isLoading: true,
+  logout: async () => {},
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isLoading, setIsLoading] = useState(true); // Mặc định là đang load
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Giả lập kiểm tra token/session khi vừa mở app
-    const checkAuth = async () => {
-      try {
-        // Bạn có thể thêm logic đọc AsyncStorage ở đây
-        setIsLoading(false);
-      } catch (e) {
-        setIsLoading(false);
-      }
-    };
-    checkAuth();
+    // Firebase tự động theo dõi trạng thái đăng nhập
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
+      setIsLoading(false);
+    });
+    return unsubscribe; // cleanup khi unmount
   }, []);
 
-  const login = () => setIsLoggedIn(true);
-  const logout = () => setIsLoggedIn(false);
+  const logout = async () => {
+    await signOut(auth);
+  };
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, isLoading, login, logout }}>
+    <AuthContext.Provider
+      value={{ user, isLoggedIn: !!user, isLoading, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );

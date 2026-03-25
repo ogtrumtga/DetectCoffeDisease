@@ -2,8 +2,10 @@
 import * as Google from "expo-auth-session/providers/google";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
+import { createUserWithEmailAndPassword } from "firebase/auth";
 import { useEffect, useState } from "react";
 import { Alert, Platform } from "react-native";
+import { auth } from "../../../../config/firebase";
 import { AUTH_MESSAGES } from "../constants/auth.messages";
 
 WebBrowser.maybeCompleteAuthSession();
@@ -82,7 +84,7 @@ export const useRegister = () => {
     return "";
   };
 
-  const onRegisterPress = () => {
+  const onRegisterPress = async () => {
     const emailMsg = validateEmail(form.email);
     const isPassEmpty = form.pass.trim() === "";
     const isConfirmError =
@@ -97,16 +99,26 @@ export const useRegister = () => {
 
     if (emailMsg !== "" || isPassEmpty || isConfirmError) return;
 
-    const title = AUTH_MESSAGES.registerSuccess.title;
-    const body = AUTH_MESSAGES.registerSuccess.body;
-
-    if (Platform.OS === "web") {
-      window.alert(`${title}\n${body}`);
-      router.back();
-    } else {
-      Alert.alert(title, body, [
-        { text: "Đóng", onPress: () => router.back() },
-      ]);
+    try {
+      await createUserWithEmailAndPassword(auth, form.email.trim(), form.pass);
+      const title = AUTH_MESSAGES.registerSuccess.title;
+      const body = AUTH_MESSAGES.registerSuccess.body;
+      if (Platform.OS === "web") {
+        window.alert(`${title}\n${body}`);
+        router.back();
+      } else {
+        Alert.alert(title, body, [
+          { text: "Đóng", onPress: () => router.back() },
+        ]);
+      }
+    } catch (error: any) {
+      const msg =
+        error.code === "auth/email-already-in-use"
+          ? "Email này đã được đăng ký"
+          : error.code === "auth/weak-password"
+            ? "Mật khẩu phải có ít nhất 6 ký tự"
+            : error.message;
+      showCrossPlatformAlert("Lỗi", msg);
     }
   };
 
