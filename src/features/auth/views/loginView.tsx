@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import GoogleAuthWebView from "../../../components/GoogleAuthWebView";
 import { authStyles as styles } from "../styles/auth.styles";
 import { useLogin } from "../viewmodels/useLogin";
 
@@ -41,6 +42,9 @@ export default function LoginScreen({ onLoginSuccess }: LoginViewProps) {
     onLoginPress,
     promptGoogleLogin,
     googleRequestDisabled,
+    showGoogleWebView,
+    handleGoogleSuccess,
+    handleGoogleCancel,
   } = useLogin();
 
   const handleLogin = async () => {
@@ -147,8 +151,8 @@ export default function LoginScreen({ onLoginSuccess }: LoginViewProps) {
               styles.btnGoogle,
               googleRequestDisabled && { opacity: 0.5 },
             ]}
-            onPress={() => promptGoogleLogin()}
-            disabled={googleRequestDisabled}
+            onPress={promptGoogleLogin}
+            disabled={googleRequestDisabled || loading}
           >
             <Image
               source={{ uri: GOOGLE_LOGO_URI }}
@@ -167,6 +171,18 @@ export default function LoginScreen({ onLoginSuccess }: LoginViewProps) {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Google Auth WebView Modal */}
+      <GoogleAuthWebView
+        visible={showGoogleWebView}
+        onSuccess={async (idToken, accessToken) => {
+          const success = await handleGoogleSuccess(idToken, accessToken);
+          if (success) {
+            onLoginSuccess();
+          }
+        }}
+        onCancel={handleGoogleCancel}
+      />
     </View>
   );
 }

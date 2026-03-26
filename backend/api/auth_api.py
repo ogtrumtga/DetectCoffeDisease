@@ -1,38 +1,60 @@
 """
-Auth API service.
-
-Các hàm dưới đây tương ứng với:
-- POST /api/auth/login
-- POST /api/auth/register
-- POST /api/auth/logout
-- POST /api/auth/refresh
-- GET  /api/auth/me
-
-Chỉ khai báo tên hàm, chưa viết logic.
+Auth API endpoints.
 """
+from fastapi import APIRouter, HTTPException, Header
+from pydantic import BaseModel, EmailStr
+from backend.services import auth_service
+from typing import Optional
+
+router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
-def login_user():
-    """Đăng nhập user, trả về access/refresh token."""
-    pass
+class RegisterRequest(BaseModel):
+    email: EmailStr
+    password: str
+    displayName: Optional[str] = None
 
 
-def register_user():
-    """Đăng ký tài khoản mới."""
-    pass
+class VerifyTokenRequest(BaseModel):
+    idToken: str
 
 
-def logout_user():
-    """Đăng xuất, vô hiệu hóa refresh token hiện tại."""
-    pass
+class LogoutRequest(BaseModel):
+    uid: str
 
 
-def refresh_access_token():
-    """Làm mới access token từ refresh token hợp lệ."""
-    pass
+@router.post("/register")
+async def register(request: RegisterRequest):
+    """Đăng ký user mới."""
+    result = auth_service.register_user_service(
+        email=request.email,
+        password=request.password,
+        display_name=request.displayName
+    )
+    
+    if not result['success']:
+        raise HTTPException(status_code=400, detail=result['message'])
+    
+    return result
 
 
-def get_current_user():
-    """Lấy thông tin user hiện tại từ access token."""
-    pass
+@router.post("/verify-token")
+async def verify_token(request: VerifyTokenRequest):
+    """Xác thực ID token từ client."""
+    result = auth_service.verify_token_service(request.idToken)
+    
+    if not result['success']:
+        raise HTTPException(status_code=401, detail=result['message'])
+    
+    return result
 
+
+@router.post("/logout")
+async def logout(request: LogoutRequest):
+    """Logout user."""
+    result = auth_service.logout_user_service(request.uid)
+    
+    if not result['success']:
+        raise HTTPException(status_code=400, detail=result['message'])
+    
+    return result

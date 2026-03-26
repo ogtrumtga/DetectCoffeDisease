@@ -3,15 +3,17 @@ import { useRouter } from "expo-router";
 import { ChevronLeft, Eye, EyeOff, Mail } from "lucide-react-native";
 import React from "react";
 import {
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
+import GoogleAuthWebView from "../../../components/GoogleAuthWebView";
 import { Colors } from "../constants/Colors";
 import { authStyles as styles } from "../styles/auth.styles";
 import { useRegister } from "../viewmodels/useRegister";
@@ -33,9 +35,13 @@ export default function RegisterScreen() {
     setShowConfirm,
     rememberPassword,
     setRememberPassword,
+    loading,
     onRegisterPress,
     promptGoogleRegister,
     googleRequestDisabled,
+    showGoogleWebView,
+    handleGoogleSuccess,
+    handleGoogleCancel,
   } = useRegister();
 
   return (
@@ -152,8 +158,16 @@ export default function RegisterScreen() {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.btnMain} onPress={onRegisterPress}>
-            <Text style={styles.btnText}>Đăng ký</Text>
+          <TouchableOpacity 
+            style={[styles.btnMain, loading && { opacity: 0.6 }]} 
+            onPress={onRegisterPress}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text style={styles.btnText}>Đăng ký</Text>
+            )}
           </TouchableOpacity>
 
           {/* GOOGLE REGISTER */}
@@ -162,8 +176,8 @@ export default function RegisterScreen() {
               styles.btnGoogle,
               googleRequestDisabled && { opacity: 0.5 },
             ]}
-            onPress={() => promptGoogleRegister()}
-            disabled={googleRequestDisabled}
+            onPress={promptGoogleRegister}
+            disabled={googleRequestDisabled || loading}
           >
             <Image
               source={{ uri: GOOGLE_LOGO_URI }}
@@ -180,6 +194,13 @@ export default function RegisterScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Google Auth WebView Modal */}
+      <GoogleAuthWebView
+        visible={showGoogleWebView}
+        onSuccess={handleGoogleSuccess}
+        onCancel={handleGoogleCancel}
+      />
     </View>
   );
 }

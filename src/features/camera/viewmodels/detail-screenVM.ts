@@ -1,44 +1,64 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Alert } from "react-native";
+import { useAuth } from "@/context/AuthContext";
 import { globalHistoryData } from "../../profile/viewmodels/profileLoggedInVM";
+import { db } from "../../../../config/firebase";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 
 export const useDetailScreenVM = () => {
   const [isSaving, setIsSaving] = useState(false);
   const router = useRouter();
+  const { user } = useAuth();
 
   const handleSaveHistory = async () => {
     setIsSaving(true);
 
-    setTimeout(() => {
-      const isError = Math.random() < 0.1; // Tỷ lệ lỗi 10%
-
-      setIsSaving(false);
-      if (isError) {
+    try {
+      if (!user) {
         router.push({
-          pathname: "/error",
-          params: {
-            title: "Lỗi lưu trữ",
-            message: "Không thể kết nối với máy chủ để lưu kết quả.",
-          },
+          pathname: "/auth/login",
         });
-      } else {
-        const newRecord = {
-          id: Date.now().toString(),
-          title: "Bệnh gỉ sắt",
-          date: new Date().toLocaleDateString("vi-VN"),
-        };
-
-        globalHistoryData.unshift(newRecord);
-
-        Alert.alert("Thành công", "Đã lưu vào lịch sử chẩn đoán!", [
-          {
-            text: "OK",
-            onPress: () => router.push("/(tabs)/profile/loggedInScreen"),
-          },
-        ]);
+        return;
       }
-    }, 1500);
+
+      const newId = Date.now().toString();
+      const dateStr = new Date().toLocaleDateString("vi-VN");
+
+      // Lưu lịch sử vào: users/{uid}/histories/{historyId}
+      await setDoc(
+        doc(db, "users", user.uid, "histories", newId),
+        {
+          id: newId,
+          title: "Bệnh gỉ sắt",
+          date: dateStr,
+          createdAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      // Cập nhật local để UI phản hồi ngay (Firestore sẽ được load lại khi focus screen)
+      const newRecord = { id: newId, title: "Bệnh gỉ sắt", date: dateStr };
+      globalHistoryData = [newRecord, ...globalHistoryData];
+
+      Alert.alert("Thành công", "Đã lưu vào lịch sử chẩn đoán!", [
+        {
+          text: "OK",
+          onPress: () => router.push("/(tabs)/profile/loggedInScreen"),
+        },
+      ]);
+    } catch (e) {
+      console.error("[detail-screenVM] handleSaveHistory failed:", e);
+      router.push({
+        pathname: "/error",
+        params: {
+          title: "Lỗi lưu trữ",
+          message: "Không thể lưu vào Firebase Firestore.",
+        },
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
   //POST /api/history
   //GET /api/medicines/:diseaseId

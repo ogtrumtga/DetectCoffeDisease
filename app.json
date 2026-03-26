@@ -2,7 +2,7 @@
   "expo": {
     "name": "MyNewProject",
     "slug": "MyNewProject",
-    "owner": "keriyu",
+    "owner": "thanhduong1",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -12,6 +12,7 @@
     "ios": {
       "bundleIdentifier": "com.mynewproject.MyNewProject",
       "supportsTablet": true,
+      "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "NSCameraUsageDescription": "Ứng dụng cần quyền truy cập camera để chụp ảnh lá cà phê và phát hiện bệnh.",
         "NSPhotoLibraryUsageDescription": "Ứng dụng cần quyền truy cập thư viện ảnh để chọn ảnh lá cà phê.",

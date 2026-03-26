@@ -1,6 +1,6 @@
-import ReactNativeAsyncStorage from "@react-native-async-storage/async-storage";
 import { initializeApp } from "firebase/app";
-import { getReactNativePersistence, initializeAuth } from "firebase/auth";
+import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAe8OgRrDhgalVG_E3GMpAaCwHIh50kvn8",
@@ -14,8 +14,10 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-export const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(ReactNativeAsyncStorage),
-});
+// Khởi tạo Auth - Firebase tự động xử lý persistence cho React Native
+export const auth = getAuth(app);
+
+// Firestore (Cloud Firestore) để lưu user/profile/history/posts/notifications
+export const db = getFirestore(app);
 
 export default app;

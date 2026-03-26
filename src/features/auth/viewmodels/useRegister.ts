@@ -1,14 +1,10 @@
 // src/features/auth/viewmodels/useRegister.ts
-import * as Google from "expo-auth-session/providers/google";
 import { useRouter } from "expo-router";
-import * as WebBrowser from "expo-web-browser";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { useEffect, useState } from "react";
+import { GoogleAuthProvider, createUserWithEmailAndPassword, signInWithCredential } from "firebase/auth";
+import { useState } from "react";
 import { Alert, Platform } from "react-native";
 import { auth } from "../../../../config/firebase";
 import { AUTH_MESSAGES } from "../constants/auth.messages";
-
-WebBrowser.maybeCompleteAuthSession();
 
 export const useRegister = () => {
   const router = useRouter();
@@ -22,48 +18,8 @@ export const useRegister = () => {
   const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [rememberPassword, setRememberPassword] = useState(false);
-
-  // Giống login: hardcode proxy URI
-  const redirectUri = "https://auth.expo.io/@keriyu/MyNewProject";
-
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    // Chỉ dùng Web Client ID, giống login
-    clientId:
-      "666124679736-e500findu3suhjfjjd36f56v6qhphlab.apps.googleusercontent.com",
-    redirectUri,
-  });
-
-  useEffect(() => {
-    // Log kiểm tra URI, giống login
-    if (request) console.log("Redirect URI đang dùng:", request.redirectUri);
-
-    if (response?.type === "success") {
-      const { authentication } = response;
-      if (authentication?.accessToken) {
-        fetchUserInfo(authentication.accessToken);
-      }
-      showCrossPlatformAlert("Thành công", "Đăng ký Google thành công!");
-    }
-
-    if (response?.type === "error") {
-      console.error("Google auth error:", response.error);
-      showCrossPlatformAlert("Lỗi", "Đăng ký Google thất bại!");
-    }
-  }, [response, request]);
-
-  const fetchUserInfo = async (accessToken: string) => {
-    try {
-      const res = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      const userInfo = await res.json();
-      if (userInfo.email) {
-        setForm((prev) => ({ ...prev, email: userInfo.email }));
-      }
-    } catch (error) {
-      console.error("Error fetching user info:", error);
-    }
-  };
+  const [showGoogleWebView, setShowGoogleWebView] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const showCrossPlatformAlert = (title: string, message: string) => {
     if (Platform.OS === "web") {
@@ -100,7 +56,21 @@ export const useRegister = () => {
     if (emailMsg !== "" || isPassEmpty || isConfirmError) return;
 
     try {
-      await createUserWithEmailAndPassword(auth, form.email.trim(), form.pass);
+      setLoading(true);
+      const userCredential = await createUserWithEmailAndPassword(auth, form.email.trim(), form.pass);
+      
+      // Lưu profile vào Firestore
+      const { getFirestore, doc, setDoc } = await import('firebase/firestore');
+      const db = getFirestore();
+      await setDoc(doc(db, 'users', userCredential.user.uid), {
+        email: userCredential.user.email,
+        displayName: '',
+        photoURL: '',
+        bio: '',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      
       const title = AUTH_MESSAGES.registerSuccess.title;
       const body = AUTH_MESSAGES.registerSuccess.body;
       if (Platform.OS === "web") {
@@ -119,7 +89,65 @@ export const useRegister = () => {
             ? "Mật khẩu phải có ít nhất 6 ký tự"
             : error.message;
       showCrossPlatformAlert("Lỗi", msg);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const promptGoogleRegister = () => {
+    setShowGoogleWebView(true);
+  };
+
+  const handleGoogleSuccess = async (idToken: string, accessToken: string) => {
+    try {
+      setShowGoogleWebView(false);
+      setLoading(true);
+      
+      console.log('[useRegister] Signing in with Firebase...');
+      
+      // Ưu tiên dùng ID token
+      const credential = idToken 
+        ? GoogleAuthProvider.credential(idToken)
+        : GoogleAuthProvider.credential(null, accessToken);
+      
+      const userCredential = await signInWithCredential(auth, credential);
+      
+      // Lưu profile vào Firestore nếu là user mới
+      const { getFirestore, doc, getDoc, setDoc } = await import('firebase/firestore');
+      const db = getFirestore();
+      const userRef = doc(db, 'users', userCredential.user.uid);
+      const userDoc = await getDoc(userRef);
+      
+      if (!userDoc.exists()) {
+        // User mới - tạo profile trong Firestore
+        await setDoc(userRef, {
+          email: userCredential.user.email,
+          displayName: userCredential.user.displayName || '',
+          photoURL: userCredential.user.photoURL || '',
+          bio: '',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+        console.log('[useRegister] Created new user profile in Firestore');
+      }
+      
+      await showCrossPlatformAlert("Thành công", "Đăng ký Google thành công!");
+      
+      // Quay về màn hình trước (login hoặc home)
+      router.back();
+      
+      return true;
+    } catch (error: any) {
+      console.error('[useRegister] Firebase sign-in error:', error);
+      await showCrossPlatformAlert("Lỗi", "Đăng ký Google thất bại: " + error.message);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleCancel = () => {
+    setShowGoogleWebView(false);
   };
 
   return {
@@ -137,8 +165,12 @@ export const useRegister = () => {
     setShowConfirm,
     rememberPassword,
     setRememberPassword,
+    loading,
     onRegisterPress,
-    promptGoogleRegister: () => promptAsync(),
-    googleRequestDisabled: !request,
+    promptGoogleRegister,
+    googleRequestDisabled: false,
+    showGoogleWebView,
+    handleGoogleSuccess,
+    handleGoogleCancel,
   };
 };

@@ -1,13 +1,9 @@
 // src/features/auth/viewmodels/useLogin.ts
-import * as Google from "expo-auth-session/providers/google";
-import * as WebBrowser from "expo-web-browser";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { useEffect, useState } from "react";
+import { GoogleAuthProvider, signInWithCredential, signInWithEmailAndPassword } from "firebase/auth";
+import { useState } from "react";
 import { Alert, Platform } from "react-native";
 import { auth } from "../../../../config/firebase";
 import { AUTH_MESSAGES } from "../constants/auth.messages";
-
-WebBrowser.maybeCompleteAuthSession();
 
 export const useLogin = () => {
   const [email, setEmail] = useState("");
@@ -17,47 +13,7 @@ export const useLogin = () => {
   const [emailHint, setEmailHint] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(false);
-
-  // CÁCH MỚI: Dùng makeRedirectUri với tham số native để ép ra link HTTPS proxy
-  // const redirectUri = AuthSession.makeRedirectUri({
-  //   native: "https://auth.expo.io/@keriyu/MyNewProject",
-  // });
-  const redirectUri = "https://auth.expo.io/@keriyu/MyNewProject";
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    // Sử dụng Web Client ID cho Expo Go
-    clientId:
-      "666124679736-e500findu3suhjfjjd36f56v6qhphlab.apps.googleusercontent.com",
-    // iosClientId:
-    //   "666124679736-hopigge19ut1k0tvj661hukrur20gu6o.apps.googleusercontent.com",
-    // androidClientId:
-    //   "666124679736-m1rcpu26ljlq3kf3hbeflvubheugk44d.apps.googleusercontent.com",
-    redirectUri,
-  });
-
-  useEffect(() => {
-    // Log để bạn kiểm tra link thực tế app đang gửi đi
-    // if (request) console.log("Redirect URI đang dùng:", request.redirectUri);
-
-    if (response?.type === "success") {
-      const { authentication } = response;
-      if (authentication?.accessToken) {
-        fetchUserInfo(authentication.accessToken);
-      }
-      showCrossPlatformAlert("Thành công", "Đăng nhập Google thành công!");
-    }
-  }, [response, request]);
-
-  const fetchUserInfo = async (accessToken: string) => {
-    try {
-      const res = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      const userInfo = await res.json();
-      if (userInfo.email) setEmail(userInfo.email);
-    } catch (error) {
-      console.error("Error fetching user info:", error);
-    }
-  };
+  const [showGoogleWebView, setShowGoogleWebView] = useState(false);
 
   const validateEmail = (emailStr: string) => {
     const trimmed = emailStr.trim();
@@ -97,7 +53,7 @@ export const useLogin = () => {
       await signInWithEmailAndPassword(auth, email.trim(), password);
       await showCrossPlatformAlert(
         AUTH_MESSAGES.loginSuccess.title,
-        AUTH_MESSAGES.loginSuccess.body,
+        AUTH_MESSAGES.loginSuccess.body
       );
       return true;
     } catch (error: any) {
@@ -114,6 +70,60 @@ export const useLogin = () => {
     }
   };
 
+  const promptGoogleLogin = () => {
+    setShowGoogleWebView(true);
+  };
+
+  const handleGoogleSuccess = async (idToken: string, accessToken: string) => {
+    try {
+      setShowGoogleWebView(false);
+      setLoading(true);
+      
+      console.log('[useLogin] Signing in with Firebase...');
+      
+      // Ưu tiên dùng ID token
+      const credential = idToken 
+        ? GoogleAuthProvider.credential(idToken)
+        : GoogleAuthProvider.credential(null, accessToken);
+      
+      const userCredential = await signInWithCredential(auth, credential);
+      
+      // Lưu profile vào Firestore nếu là user mới
+      const { getFirestore, doc, getDoc, setDoc } = await import('firebase/firestore');
+      const db = getFirestore();
+      const userRef = doc(db, 'users', userCredential.user.uid);
+      const userDoc = await getDoc(userRef);
+      
+      if (!userDoc.exists()) {
+        // User mới - tạo profile trong Firestore
+        await setDoc(userRef, {
+          email: userCredential.user.email,
+          displayName: userCredential.user.displayName || '',
+          photoURL: userCredential.user.photoURL || '',
+          bio: '',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+        console.log('[useLogin] Created new user profile in Firestore');
+      }
+      
+      await showCrossPlatformAlert("Thành công", "Đăng nhập Google thành công!");
+      
+      // Trả về true để loginView biết đăng nhập thành công
+      return true;
+    } catch (error: any) {
+      console.error('[useLogin] Firebase sign-in error:', error);
+      setErrorMessage("Đăng nhập Google thất bại: " + error.message);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleCancel = () => {
+    setShowGoogleWebView(false);
+  };
+
   return {
     email,
     setEmail,
@@ -127,7 +137,10 @@ export const useLogin = () => {
     loading,
     clearAllErrors,
     onLoginPress,
-    promptGoogleLogin: () => promptAsync(),
-    googleRequestDisabled: !request,
+    promptGoogleLogin,
+    googleRequestDisabled: false,
+    showGoogleWebView,
+    handleGoogleSuccess,
+    handleGoogleCancel,
   };
 };
