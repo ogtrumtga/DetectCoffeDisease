@@ -2,20 +2,15 @@
 Firebase Diagnosis repository.
 
 Lưu metadata của kết quả chẩn đoán bệnh cà phê.
+Sử dụng collection 'diagnoses' (giống history_repository)
 """
+from backend.repositories import firebase_history_repository as history_repo
 
+# Diagnosis repository sử dụng chung collection 'diagnoses' với history
+# Để tránh trùng lặp, ta alias các functions từ history_repository
 
-def get_diagnosis_by_id():
-    """Lấy một kết quả chẩn đoán theo id."""
-    pass
-
-
-def insert_diagnosis():
-    """Thêm bản ghi chẩn đoán mới vào Firestore."""
-    pass
-
-
-def query_diagnoses_by_user():
-    """Query các kết quả chẩn đoán theo user."""
-    pass
+get_diagnosis_by_id = history_repo.get_history_by_id
+insert_diagnosis = history_repo.insert_history
+query_diagnoses_by_user = history_repo.query_histories_by_user
+delete_diagnosis_by_id = history_repo.delete_history_by_id
 

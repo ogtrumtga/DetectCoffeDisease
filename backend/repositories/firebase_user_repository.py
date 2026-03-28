@@ -22,7 +22,7 @@ def get_user_by_id(user_id: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-def create_user_profile(user_id: str, email: str, display_name: str = None, photo_url: str = None) -> bool:
+def create_user_profile(user_id: str, email: str, display_name: str = None, photo_url: str = None, auth_provider: str = 'email') -> bool:
     """Tạo document profile mặc định cho user mới."""
     try:
         user_data = {
@@ -30,6 +30,7 @@ def create_user_profile(user_id: str, email: str, display_name: str = None, phot
             'displayName': display_name or '',
             'photoURL': photo_url or '',
             'bio': '',
+            'authProvider': auth_provider,  # 'email' hoặc 'google'
             'createdAt': datetime.utcnow(),
             'updatedAt': datetime.utcnow()
         }

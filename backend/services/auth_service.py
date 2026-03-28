@@ -30,7 +30,8 @@ def register_user_service(email: str, password: str, display_name: str = None) -
     success = user_repo.create_user_profile(
         user_id=user_data['uid'],
         email=user_data['email'],
-        display_name=user_data.get('displayName')
+        display_name=user_data.get('displayName'),
+        auth_provider='email'  # Đăng ký bằng email/password
     )
     
     if not success:
