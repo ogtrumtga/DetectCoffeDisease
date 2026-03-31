@@ -181,6 +181,13 @@ def toggle_post_like_service(post_id: str, user_id: str) -> Dict[str, Any]:
     - Tạo/xóa document trong collection 'likes'
     - Cập nhật likesCount trong collection 'posts' (denormalized)
     """
+    # Đảm bảo bài đăng tồn tại trước khi like/unlike.
+    if not post_repo.get_post_by_id(post_id):
+        return {
+            'success': False,
+            'message': 'Post not found'
+        }
+
     # Kiểm tra đã like chưa
     is_liked = like_repo.check_user_liked_post(post_id, user_id)
     
@@ -212,6 +219,13 @@ def add_comment_to_post_service(post_id: str, user_id: str, content: str) -> Dic
     - Tạo document trong collection 'comments'
     - Cập nhật commentsCount trong collection 'posts' (denormalized)
     """
+    # Đảm bảo bài đăng tồn tại trước khi tạo comment.
+    if not post_repo.get_post_by_id(post_id):
+        return {
+            'success': False,
+            'message': 'Post not found'
+        }
+
     # Tạo comment
     comment_id = comment_repo.create_comment(post_id, user_id, content)
     

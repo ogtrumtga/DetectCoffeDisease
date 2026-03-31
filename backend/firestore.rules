@@ -85,10 +85,10 @@ service cloud.firestore {
     }
     
     // ========================================================================
-    // COLLECTION: diagnoses
+    // COLLECTION: history
     // Lưu kết quả chẩn đoán bệnh cà phê
     // ========================================================================
-    match /diagnoses/{diagnosisId} {
+    match /history/{diagnosisId} {
       // Chỉ chủ sở hữu mới có thể đọc lịch sử chẩn đoán của mình
       allow read: if isAuthenticated() 
                   && resource.data.userId == request.auth.uid;

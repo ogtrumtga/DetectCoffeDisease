@@ -116,10 +116,10 @@ def main():
     
     # ========================================================================
     # 5. COLLECTION: diagnoses
-    # Lưu lịch sử chẩn đoán bệnh cà phê
+    # Lưu kết quả chẩn đoán chi tiết từ AI model
     # ========================================================================
-    print("\n📦 [5/7] Tạo collection: diagnoses")
-    print("     Mục đích: Lưu lịch sử chẩn đoán bệnh cà phê")
+    print("\n📦 [5/8] Tạo collection: diagnoses")
+    print("     Mục đích: Lưu kết quả chẩn đoán chi tiết từ AI model")
     diagnoses_sample = {
         'userId': '_structure_sample',  # FK → users
         'diseaseKey': 'healthy',  # Key của bệnh (healthy/rust/cercospora/miner/phoma)
@@ -130,19 +130,42 @@ def main():
         'treatment': 'Tiếp tục chăm sóc bình thường.',
         'severity': 'none',  # none/low/medium/high
         'imageUrl': '',  # URL ảnh đã upload lên Storage
+        'modelVersion': 'v1.0',  # Version của AI model
+        'processingTime': 1.5,  # Thời gian xử lý (giây)
         'createdAt': datetime.utcnow()
     }
     create_collection_structure('diagnoses', '_structure_sample', diagnoses_sample)
     print("     Fields: userId, diseaseKey, diseaseName, diseaseNameVi, confidence,")
-    print("             description, treatment, severity, imageUrl, createdAt")
+    print("             description, treatment, severity, imageUrl, modelVersion")
     print("     Relationship: userId → users")
     print("     Supported diseases: healthy, rust, cercospora, miner, phoma")
     
     # ========================================================================
-    # 6. COLLECTION: notifications
+    # 6. COLLECTION: history
+    # Lưu lịch sử các lần chẩn đoán (metadata only)
+    # ========================================================================
+    print("\n📦 [6/8] Tạo collection: history")
+    print("     Mục đích: Lưu lịch sử các lần chẩn đoán (metadata)")
+    history_sample = {
+        'userId': '_structure_sample',  # FK → users
+        'diagnosisId': '_structure_sample',  # FK → diagnoses
+        'imageId': 'img_001',  # ID ảnh trong Storage
+        'predictions': {  # Tóm tắt kết quả
+            'disease': 'healthy',
+            'confidence': 0.95
+        },
+        'createdAt': datetime.utcnow()
+    }
+    create_collection_structure('history', '_structure_sample', history_sample)
+    print("     Fields: userId, diagnosisId, imageId, predictions, createdAt")
+    print("     Relationships: userId → users, diagnosisId → diagnoses")
+    print("     Purpose: Lightweight list, link to full diagnosis")
+    
+    # ========================================================================
+    # 7. COLLECTION: notifications
     # Lưu thông báo cho người dùng
     # ========================================================================
-    print("\n📦 [6/7] Tạo collection: notifications")
+    print("\n📦 [7/8] Tạo collection: notifications")
     print("     Mục đích: Lưu thông báo cho người dùng")
     notifications_sample = {
         'userId': '_structure_sample',  # FK → users
@@ -159,10 +182,10 @@ def main():
     print("     Types: system, like, comment, diagnosis_alert")
     
     # ========================================================================
-    # 7. COLLECTION: weather_cache
+    # 8. COLLECTION: weather_cache
     # Cache dữ liệu thời tiết
     # ========================================================================
-    print("\n📦 [7/7] Tạo collection: weather_cache")
+    print("\n📦 [8/8] Tạo collection: weather_cache")
     print("     Mục đích: Cache dữ liệu thời tiết")
     weather_sample = {
         'locationKey': 'sample_location',
@@ -192,7 +215,8 @@ def main():
         ('posts', 'Bài đăng cộng đồng', 'authorId, title, content, images, tags, likesCount, commentsCount'),
         ('comments', 'Bình luận bài đăng', 'postId, authorId, content'),
         ('likes', 'Lượt thích bài đăng', 'postId, userId'),
-        ('diagnoses', 'Lịch sử chẩn đoán bệnh', 'userId, diseaseKey, diseaseName, confidence, imageUrl'),
+        ('diagnoses', 'Kết quả chẩn đoán chi tiết', 'userId, diseaseKey, diseaseName, confidence, imageUrl, treatment'),
+        ('history', 'Lịch sử chẩn đoán (metadata)', 'userId, diagnosisId, imageId, predictions'),
         ('notifications', 'Thông báo người dùng', 'userId, type, title, message, isRead'),
         ('weather_cache', 'Cache dữ liệu thời tiết', 'locationKey, weatherData')
     ]
@@ -205,7 +229,7 @@ def main():
     print("\n🌐 Kiểm tra trên Firebase Console:")
     print("  👉 https://console.firebase.google.com/")
     print("  👉 Chọn project → Firestore Database")
-    print("  👉 Bạn sẽ thấy 7 collections với document '_structure_sample'")
+    print("  👉 Bạn sẽ thấy 8 collections với document '_structure_sample'")
     
     print("\n" + "="*80)
     print("⚠️  QUAN TRỌNG: CẦN SETUP THÊM")
@@ -221,7 +245,8 @@ def main():
         ('posts', 'authorId (ASC) + createdAt (DESC)', 'Query bài đăng của user'),
         ('comments', 'postId (ASC) + createdAt (ASC)', 'Query comments của bài đăng'),
         ('likes', 'postId (ASC) + userId (ASC)', 'Query likes của bài đăng'),
-        ('diagnoses', 'userId (ASC) + createdAt (DESC)', 'Query lịch sử chẩn đoán'),
+        ('diagnoses', 'userId (ASC) + createdAt (DESC)', 'Query kết quả chẩn đoán'),
+        ('history', 'userId (ASC) + createdAt (DESC)', 'Query lịch sử chẩn đoán'),
         ('notifications', 'userId (ASC) + isRead (ASC) + createdAt (DESC)', 'Query thông báo chưa đọc')
     ]
     

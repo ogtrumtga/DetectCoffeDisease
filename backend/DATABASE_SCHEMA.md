@@ -11,7 +11,7 @@ users (1) ──────┬─────── (n) posts
                 │
                 ├─────── (n) likes
                 │
-                ├─────── (n) diagnoses
+                ├─────── (n) history
                 │
                 └─────── (n) notifications
 
@@ -119,7 +119,7 @@ weather_cache (độc lập, không có quan hệ)
 
 ---
 
-### 5. COLLECTION: `diagnoses`
+### 5. COLLECTION: `history`
 **Mục đích**: Lưu lịch sử chẩn đoán bệnh cà phê
 
 **Document ID**: Auto-generated
@@ -198,8 +198,8 @@ weather_cache (độc lập, không có quan hệ)
 3. **users → likes**: 1 user có nhiều lượt thích
    - Foreign Key: `likes.userId` → `users.{userId}`
 
-4. **users → diagnoses**: 1 user có nhiều lịch sử chẩn đoán
-   - Foreign Key: `diagnoses.userId` → `users.{userId}`
+4. **users → history**: 1 user có nhiều lịch sử chẩn đoán
+   - Foreign Key: `history.userId` → `users.{userId}`
 
 5. **users → notifications**: 1 user có nhiều thông báo
    - Foreign Key: `notifications.userId` → `users.{userId}`
@@ -237,7 +237,7 @@ Các composite indexes cần tạo (xem file `firestore.indexes.json`):
 1. **posts**: `authorId + createdAt`
 2. **comments**: `postId + createdAt`
 3. **likes**: `postId + userId`
-4. **diagnoses**: `userId + createdAt`
+4. **history**: `userId + createdAt`
 5. **notifications**: `userId + isRead + createdAt`
 
 ---
@@ -251,6 +251,6 @@ Xem file `backend/firestore.rules` để biết chi tiết security rules.
 - `posts`: Public read, authenticated create, owner update/delete
 - `comments`: Public read, authenticated create, owner delete
 - `likes`: Public read, authenticated write
-- `diagnoses`: Owner read/delete only, backend create
+- `history`: Owner read/delete only, backend create
 - `notifications`: Owner read/update/delete, backend create
 - `weather_cache`: Public read, backend write only

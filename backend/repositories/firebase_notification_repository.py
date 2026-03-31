@@ -11,20 +11,18 @@ from datetime import datetime
 def query_notifications_by_user(user_id: str, limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
     """Query danh sách notification theo user (có sort, phân trang)."""
     try:
-        query = db.collection('notifications')\
-            .where('userId', '==', user_id)\
-            .order_by('createdAt', direction='DESCENDING')\
-            .limit(limit)\
-            .offset(offset)
-        
-        docs = query.stream()
+        # Avoid composite index requirement by filtering in Python.
+        docs = db.collection('notifications').stream()
         notifications = []
         for doc in docs:
             data = doc.to_dict()
+            if data.get('userId') != user_id:
+                continue
             data['id'] = doc.id
             notifications.append(data)
-        
-        return notifications
+
+        notifications.sort(key=lambda x: x.get('createdAt') or datetime.min, reverse=True)
+        return notifications[offset: offset + limit]
     except Exception as e:
         print(f"Error getting notifications: {e}")
         return []
@@ -53,14 +51,15 @@ def set_notification_read(notification_id: str, user_id: str) -> bool:
 def set_all_notifications_read(user_id: str) -> bool:
     """Đánh dấu tất cả notification của user là đã đọc."""
     try:
-        docs = db.collection('notifications')\
-            .where('userId', '==', user_id)\
-            .where('isRead', '==', False)\
-            .stream()
-        
+        # Single-field query only (avoids composite index userId + isRead).
+        docs = db.collection('notifications').where('userId', '==', user_id).stream()
+
         for doc in docs:
+            data = doc.to_dict() or {}
+            if data.get('isRead') is True:
+                continue
             doc.reference.update({'isRead': True})
-        
+
         return True
     except Exception as e:
         print(f"Error marking all notifications as read: {e}")

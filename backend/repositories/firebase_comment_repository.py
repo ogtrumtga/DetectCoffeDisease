@@ -11,20 +11,18 @@ from datetime import datetime
 def get_comments_by_post(post_id: str, limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
     """Lấy danh sách comment của một bài đăng."""
     try:
-        query = db.collection('comments')\
-            .where('postId', '==', post_id)\
-            .order_by('createdAt', direction='ASCENDING')\
-            .limit(limit)\
-            .offset(offset)
-        
-        docs = query.stream()
+        # Avoid composite index requirement by filtering in Python.
+        docs = db.collection('comments').stream()
         comments = []
         for doc in docs:
             data = doc.to_dict()
+            if data.get('postId') != post_id:
+                continue
             data['id'] = doc.id
             comments.append(data)
-        
-        return comments
+
+        comments.sort(key=lambda x: x.get('createdAt') or datetime.min)
+        return comments[offset: offset + limit]
     except Exception as e:
         print(f"Error getting comments: {e}")
         return []

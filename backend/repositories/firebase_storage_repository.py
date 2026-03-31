@@ -6,7 +6,13 @@ Quản lý upload/xóa file (ảnh avatar, ảnh lá cà phê, ...).
 from firebase_admin import storage
 from datetime import datetime
 import uuid
-import os
+
+from backend.config import FIREBASE_STORAGE_BUCKET
+
+
+def _bucket():
+    """Default bucket configured in Firebase Admin (FIREBASE_STORAGE_BUCKET)."""
+    return storage.bucket(FIREBASE_STORAGE_BUCKET)
 
 
 def upload_avatar(user_id: str, file_data: bytes, file_extension: str = 'jpg') -> str:
@@ -22,7 +28,7 @@ def upload_avatar(user_id: str, file_data: bytes, file_extension: str = 'jpg') -
         URL public của ảnh
     """
     try:
-        bucket = storage.bucket()
+        bucket = _bucket()
         
         # Tạo tên file unique
         filename = f"avatars/{user_id}/{uuid.uuid4()}.{file_extension}"
@@ -54,7 +60,7 @@ def upload_diagnosis_image(user_id: str, file_data: bytes, file_extension: str =
         URL public của ảnh
     """
     try:
-        bucket = storage.bucket()
+        bucket = _bucket()
         
         # Tạo tên file với timestamp
         timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
@@ -87,7 +93,7 @@ def upload_post_image(user_id: str, file_data: bytes, file_extension: str = 'jpg
         URL public của ảnh
     """
     try:
-        bucket = storage.bucket()
+        bucket = _bucket()
         
         # Tạo tên file
         timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
@@ -118,7 +124,7 @@ def delete_file_by_url(file_url: str) -> bool:
         True nếu xóa thành công
     """
     try:
-        bucket = storage.bucket()
+        bucket = _bucket()
         
         # Extract blob name from URL
         # URL format: https://storage.googleapis.com/{bucket_name}/{blob_name}
@@ -146,7 +152,7 @@ def delete_file_by_path(file_path: str) -> bool:
         True nếu xóa thành công
     """
     try:
-        bucket = storage.bucket()
+        bucket = _bucket()
         blob = bucket.blob(file_path)
         blob.delete()
         

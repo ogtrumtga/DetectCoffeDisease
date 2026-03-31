@@ -5,7 +5,15 @@ Main entry point for the API server.
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from backend.api import auth_api, user_api
+from fastapi.openapi.utils import get_openapi
+from backend.api import (
+    auth_api,
+    user_api,
+    history_api,
+    community_api,
+    notification_api,
+    weather_api
+)
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -13,6 +21,30 @@ app = FastAPI(
     description="Backend API for Coffee Disease Detection Mobile App",
     version="1.0.0"
 )
+
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+    )
+    schema["components"]["securitySchemes"] = {
+        "BearerAuth": {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+        }
+    }
+    for path in schema["paths"].values():
+        for method in path.values():
+            method["security"] = [{"BearerAuth": []}]
+    app.openapi_schema = schema
+    return schema
+
+app.openapi = custom_openapi
 
 # CORS middleware - cho phép React Native app gọi API
 app.add_middleware(
@@ -26,6 +58,10 @@ app.add_middleware(
 # Include routers
 app.include_router(auth_api.router)
 app.include_router(user_api.router)
+app.include_router(history_api.router)
+app.include_router(community_api.router)
+app.include_router(notification_api.router)
+app.include_router(weather_api.router)
 
 
 @app.get("/")
