@@ -1,0 +1,97 @@
+# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files
+.env
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+app-example
+
+# generated native folders
+/ios
+/android
+
+# Kiro IDE
+.kiro/
+
+# ============================================================================
+# FIREBASE & BACKEND SECRETS (QUAN TRỌNG - KHÔNG PUSH LÊN GITHUB!)
+# ============================================================================
+
+# Firebase Service Account Key (chứa credentials nhạy cảm)
+backend/serviceAccountKey.json
+serviceAccountKey.json
+**/serviceAccountKey.json
+
+# Firebase config files (nếu có thông tin nhạy cảm)
+backend/firebase-config.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+backend/__pycache__/
+backend/**/__pycache__/
+
+# Virtual Environment
+venv/
+env/
+ENV/
+backend/venv/
+backend/env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+backend/logs/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# OS
+Thumbs.db
+
+backend/predict_models/

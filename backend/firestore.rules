@@ -1,0 +1,143 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function: Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function: Check if user owns the resource
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // ========================================================================
+    // COLLECTION: users
+    // Lưu thông tin profile người dùng
+    // ========================================================================
+    match /users/{userId} {
+      // Ai cũng có thể đọc profile (public)
+      allow read: if true;
+      
+      // Chỉ chủ sở hữu mới có thể tạo/cập nhật/xóa profile của mình
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+    
+    // ========================================================================
+    // COLLECTION: posts
+    // Lưu bài đăng cộng đồng
+    // ========================================================================
+    match /posts/{postId} {
+      // Ai cũng có thể đọc bài đăng
+      allow read: if true;
+      
+      // User đã đăng nhập có thể tạo bài đăng
+      allow create: if isAuthenticated() 
+                    && request.resource.data.authorId == request.auth.uid;
+      
+      // Chỉ tác giả mới có thể cập nhật/xóa bài đăng của mình
+      allow update: if isAuthenticated() 
+                    && resource.data.authorId == request.auth.uid;
+      allow delete: if isAuthenticated() 
+                    && resource.data.authorId == request.auth.uid;
+    }
+    
+    // ========================================================================
+    // COLLECTION: comments
+    // Lưu bình luận bài đăng
+    // ========================================================================
+    match /comments/{commentId} {
+      // Ai cũng có thể đọc comment
+      allow read: if true;
+      
+      // User đã đăng nhập có thể tạo comment
+      allow create: if isAuthenticated() 
+                    && request.resource.data.authorId == request.auth.uid;
+      
+      // Chỉ tác giả mới có thể xóa comment của mình
+      allow delete: if isAuthenticated() 
+                    && resource.data.authorId == request.auth.uid;
+      
+      // Không cho phép update comment
+      allow update: if false;
+    }
+    
+    // ========================================================================
+    // COLLECTION: likes
+    // Lưu lượt thích bài đăng
+    // ========================================================================
+    match /likes/{likeId} {
+      // Ai cũng có thể đọc likes
+      allow read: if true;
+      
+      // User đã đăng nhập có thể like/unlike
+      // Document ID phải theo format: {userId}_{postId}
+      allow create: if isAuthenticated() 
+                    && request.resource.data.userId == request.auth.uid;
+      allow delete: if isAuthenticated() 
+                    && resource.data.userId == request.auth.uid;
+      
+      // Không cho phép update likes
+      allow update: if false;
+    }
+    
+    // ========================================================================
+    // COLLECTION: history
+    // Lưu kết quả chẩn đoán bệnh cà phê
+    // ========================================================================
+    match /history/{diagnosisId} {
+      // Chỉ chủ sở hữu mới có thể đọc lịch sử chẩn đoán của mình
+      allow read: if isAuthenticated() 
+                  && resource.data.userId == request.auth.uid;
+      
+      // Backend sẽ tạo diagnosis qua Admin SDK
+      // User không thể tự tạo từ client
+      allow create: if false;
+      
+      // Chủ sở hữu có thể xóa lịch sử của mình
+      allow delete: if isAuthenticated() 
+                    && resource.data.userId == request.auth.uid;
+      
+      // Không cho phép update diagnosis
+      allow update: if false;
+    }
+    
+    // ========================================================================
+    // COLLECTION: notifications
+    // Lưu thông báo cho người dùng
+    // ========================================================================
+    match /notifications/{notificationId} {
+      // Chỉ chủ sở hữu mới có thể đọc thông báo của mình
+      allow read: if isAuthenticated() 
+                  && resource.data.userId == request.auth.uid;
+      
+      // Chỉ backend có thể tạo notification (qua Admin SDK)
+      allow create: if false;
+      
+      // User có thể cập nhật trạng thái đã đọc
+      allow update: if isAuthenticated() 
+                    && resource.data.userId == request.auth.uid
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                       .hasOnly(['isRead']);
+      
+      // User có thể xóa thông báo của mình
+      allow delete: if isAuthenticated() 
+                    && resource.data.userId == request.auth.uid;
+    }
+    
+    // ========================================================================
+    // COLLECTION: weather_cache
+    // Cache dữ liệu thời tiết
+    // ========================================================================
+    match /weather_cache/{locationKey} {
+      // Ai cũng có thể đọc cache thời tiết
+      allow read: if true;
+      
+      // Chỉ backend có thể ghi cache (qua Admin SDK)
+      allow write: if false;
+    }
+  }
+}
