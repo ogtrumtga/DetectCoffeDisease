@@ -1,89 +1,145 @@
 """
-Diagnosis (Coffee Disease Detection) service.
+Diagnosis Service — Coffee Disease Detection.
 
-Xử lý:
-- Nhận ảnh lá cà phê
-- Gọi model ML để dự đoán bệnh
-- Chuẩn hóa kết quả chẩn đoán
-- Lưu vào diagnoses (full detail) + history (metadata)
-- Tạo notification nếu cần
+Xử lý toàn bộ vòng đời chẩn đoán:
+  1. Upload ảnh lên Cloudinary
+  2. Chạy YOLO (best.pt) để dự đoán bệnh
+  3. Lưu kết quả đầy đủ vào collection diagnoses (không còn collection history riêng)
+  4. Tạo notification nếu phát hiện bệnh nghiêm trọng
+
+Collection diagnoses chứa tất cả: metadata lịch sử + chi tiết chẩn đoán.
 """
 from backend.repositories import firebase_diagnosis_repository as diagnosis_repo
-from backend.repositories import firebase_history_repository as history_repo
 from backend.repositories import firebase_storage_repository as storage_repo
 from backend.repositories import firebase_notification_repository as notification_repo
 from backend.repositories import firebase_image_repository as image_repo
+from backend.repositories import firebase_disease_repository as disease_repo
+from backend.repositories import firebase_treatment_repository as treatment_repo
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 from io import BytesIO
 import os
 import importlib
+import numpy as np
 
 import requests
 from PIL import Image
 
 
-MODEL_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'predict_models', 'version1.pt')
+MODEL_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'predict_models', 'best.pt')
 _YOLO_MODEL = None
+_DISEASES_CACHE: Optional[Dict[str, Dict[str, Any]]] = None
+_TREATMENTS_CACHE: Optional[Dict[str, Dict[str, Any]]] = None
 
 
-# Danh sách bệnh cà phê được hỗ trợ
-SUPPORTED_DISEASES = {
-    'healthy': {
-        'name': 'Healthy (Khỏe mạnh)',
-        'name_vi': 'Lá khỏe mạnh',
-        'description': 'Lá cà phê khỏe mạnh, không có dấu hiệu bệnh.',
-        'treatment': 'Tiếp tục chăm sóc bình thường. Bón phân định kỳ và tưới nước đầy đủ.',
+# ── Helper functions để load disease và treatment từ Firestore ──────────────
+
+def _load_diseases_from_firestore() -> Dict[str, Dict[str, Any]]:
+    """Load tất cả diseases từ Firestore và cache lại."""
+    global _DISEASES_CACHE
+    
+    if _DISEASES_CACHE is not None:
+        return _DISEASES_CACHE
+    
+    print("[Disease] Loading diseases from Firestore...")
+    diseases = disease_repo.get_all_diseases()
+    
+    _DISEASES_CACHE = {}
+    for disease in diseases:
+        # Hỗ trợ cả key viết hoa và viết thường
+        disease_id = disease.get('id') or disease.get('Id')
+        if disease_id:
+            _DISEASES_CACHE[disease_id.lower()] = {
+                'id': disease_id,
+                'name': disease.get('name') or disease.get('Name', ''),
+                'description': disease.get('description') or disease.get('Description', ''),
+            }
+    
+    print(f"[Disease] Loaded {len(_DISEASES_CACHE)} diseases")
+    return _DISEASES_CACHE
+
+
+def _load_treatments_from_firestore() -> Dict[str, Dict[str, Any]]:
+    """Load tất cả treatments từ Firestore và cache lại."""
+    global _TREATMENTS_CACHE
+    
+    if _TREATMENTS_CACHE is not None:
+        return _TREATMENTS_CACHE
+    
+    print("[Treatment] Loading treatments from Firestore...")
+    # Query tất cả treatments
+    from backend.config import db
+    docs = db.collection('treatments').stream()
+    
+    _TREATMENTS_CACHE = {}
+    for doc in docs:
+        data = doc.to_dict() or {}
+        disease_id = data.get('diseaseId')
+        if disease_id:
+            _TREATMENTS_CACHE[disease_id.lower()] = {
+                'diseaseId': disease_id,
+                'steps': data.get('steps', []),
+                'medicine': data.get('medicine', []),
+                'severity': data.get('severity', 'none'),
+                'color': data.get('color', '#4CAF50'),
+            }
+    
+    print(f"[Treatment] Loaded {len(_TREATMENTS_CACHE)} treatments")
+    return _TREATMENTS_CACHE
+
+
+def _get_disease_info(disease_key: str) -> Dict[str, Any]:
+    """Lấy thông tin bệnh từ Firestore (có cache)."""
+    diseases = _load_diseases_from_firestore()
+    treatments = _load_treatments_from_firestore()
+    
+    disease_key_lower = disease_key.lower()
+    
+    # Lấy disease info
+    disease = diseases.get(disease_key_lower, {
+        'id': disease_key,
+        'name': 'Unknown Disease',
+        'description': 'No description available',
+    })
+    
+    # Lấy treatment info
+    treatment = treatments.get(disease_key_lower, {
+        'steps': ['No treatment information available'],
+        'medicine': [],
         'severity': 'none',
-        'color': '#4CAF50'
-    },
-    'rust': {
-        'name': 'Coffee Rust (Gỉ sắt)',
-        'name_vi': 'Bệnh gỉ sắt',
-        'description': 'Bệnh gỉ sắt do nấm Hemileia vastatrix gây ra. Triệu chứng: Các đốm màu vàng cam trên mặt dưới lá, lá rụng sớm.',
-        'treatment': 'Phun thuốc chống nấm (đồng oxychloride, mancozeb). Cải thiện thoát nước. Tỉa cành để tăng thông thoáng. Bón phân cân đối.',
-        'severity': 'high',
-        'color': '#FF5722'
-    },
-    'cercospora': {
-        'name': 'Cercospora Leaf Spot (Đốm lá)',
-        'name_vi': 'Bệnh đốm lá Cercospora',
-        'description': 'Bệnh đốm lá do nấm Cercospora coffeicola. Triệu chứng: Các đốm tròn màu nâu trên lá, có viền vàng.',
-        'treatment': 'Phun thuốc chống nấm. Loại bỏ lá bệnh. Tránh tưới nước lên lá. Cải thiện dinh dưỡng cho cây.',
-        'severity': 'medium',
-        'color': '#FF9800'
-    },
-    'miner': {
-        'name': 'Leaf Miner (Sâu đục lá)',
-        'name_vi': 'Sâu đục lá',
-        'description': 'Sâu đục lá cà phê (Leucoptera coffeella). Triệu chứng: Đường hầm uốn khúc trên lá, lá bị khô và rụng.',
-        'treatment': 'Phun thuốc trừ sâu sinh học. Thu gom và tiêu hủy lá bệnh. Sử dụng bẫy dính màu vàng. Thả thiên địch tự nhiên.',
-        'severity': 'medium',
-        'color': '#FFC107'
-    },
-    'phoma': {
-        'name': 'Phoma Leaf Spot (Đốm lá Phoma)',
-        'name_vi': 'Bệnh đốm lá Phoma',
-        'description': 'Bệnh đốm lá do nấm Phoma. Triệu chứng: Các đốm màu nâu đen, có thể lan rộng và gây rụng lá.',
-        'treatment': 'Phun thuốc chống nấm. Cải thiện thoát nước. Tránh tưới nước quá nhiều. Bón phân hợp lý.',
-        'severity': 'medium',
-        'color': '#795548'
+        'color': '#9E9E9E',
+    })
+    
+    # Kết hợp thông tin
+    return {
+        'id': disease.get('id'),
+        'name': disease.get('name'),
+        'description': disease.get('description'),
+        'steps': treatment.get('steps'),
+        'medicine': treatment.get('medicine'),
+        'severity': treatment.get('severity'),
+        'color': treatment.get('color'),
     }
-}
 
+
+def reload_disease_cache():
+    """Reload cache (dùng khi có thay đổi trong Firestore)."""
+    global _DISEASES_CACHE, _TREATMENTS_CACHE
+    _DISEASES_CACHE = None
+    _TREATMENTS_CACHE = None
+    print("[Cache] Disease and treatment cache cleared")
+
+
+# ── Upload ảnh ────────────────────────────────────────────────────────────────
 
 def upload_image_to_cloudinary_service(user_id: str, image_file: Any) -> Dict[str, Any]:
     """
-    Upload anh len Cloudinary va luu metadata vao Firestore collection images.
-
-    Args:
-        user_id: UID cua user
-        image_file: FastAPI UploadFile
-
-    Returns:
-        {'success': True, 'imageID': '...'}
+    Upload ảnh lên Cloudinary, lưu metadata vào collection images.
+    Trả về imageID (document id trong collection images).
     """
     try:
+        print(f"\n[Upload] Starting upload for user: {user_id}")
+        
         if not image_file:
             return {'success': False, 'message': 'Image file is required'}
 
@@ -91,41 +147,37 @@ def upload_image_to_cloudinary_service(user_id: str, image_file: Any) -> Dict[st
         if not content_type.startswith('image/'):
             return {'success': False, 'message': 'Only image files are allowed'}
 
+        print(f"[Upload] Content type: {content_type}")
+
         cloud_name = "dz89vwzco"
         api_key = "131793621143365"
         api_secret = "HEJ3cGLQ-uPHkca7SfbW5KDp01M"
-
-        if not cloud_name or not api_key or not api_secret:
-            return {
-                'success': False,
-                'message': 'Missing Cloudinary config (CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET)'
-            }
 
         try:
             cloudinary = importlib.import_module('cloudinary')
             cloudinary_uploader = importlib.import_module('cloudinary.uploader')
         except ModuleNotFoundError:
-            return {
-                'success': False,
-                'message': 'Cloudinary package is not installed. Run: pip install cloudinary'
-            }
+            return {'success': False, 'message': 'Cloudinary not installed. Run: pip install cloudinary'}
 
-        cloudinary.config(
-            cloud_name=cloud_name,
-            api_key=api_key,
-            api_secret=api_secret,
-            secure=True,
-        )
+        cloudinary.config(cloud_name=cloud_name, api_key=api_key, api_secret=api_secret, secure=True)
 
         file_bytes = image_file.file.read() if hasattr(image_file, 'file') else None
         if not file_bytes:
             return {'success': False, 'message': 'Empty image file'}
 
+        file_size_mb = len(file_bytes) / (1024 * 1024)
+        print(f"[Upload] File size: {file_size_mb:.2f} MB")
+        
+        if file_size_mb > 10:
+            return {'success': False, 'message': 'Image too large. Maximum 10MB allowed.'}
+
+        print(f"[Upload] Uploading to Cloudinary...")
         upload_result = cloudinary_uploader.upload(
             file_bytes,
             folder=f'diagnosis/{user_id}',
             resource_type='image',
             overwrite=False,
+            timeout=30,  # Timeout 30s cho Cloudinary
         )
 
         public_id = upload_result.get('public_id')
@@ -134,47 +186,68 @@ def upload_image_to_cloudinary_service(user_id: str, image_file: Any) -> Dict[st
         if not public_id or not image_url:
             return {'success': False, 'message': 'Upload succeeded but missing Cloudinary response data'}
 
-        image_id = image_repo.insert_image_metadata(
-            user_id=user_id,
-            public_id=public_id,
-            image_url=image_url,
-        )
+        print(f"[Upload] Cloudinary upload success: {public_id}")
+        print(f"[Upload] Saving metadata to Firebase...")
+
+        image_id = image_repo.insert_image_metadata(user_id=user_id, public_id=public_id, image_url=image_url)
         if not image_id:
             return {'success': False, 'message': 'Failed to save image metadata to Firebase'}
 
-        return {
-            'success': True,
-            'imageID': image_id,
-        }
+        print(f"[Upload] Complete! ImageID: {image_id}")
+        return {'success': True, 'imageID': image_id}
 
     except Exception as e:
-        print(f"Error in upload_image_to_cloudinary_service: {e}")
-        return {
-            'success': False,
-            'message': f'Error: {str(e)}'
-        }
+        error_msg = str(e)
+        print(f"[Upload] ERROR: {error_msg}")
+        
+        # Xử lý các lỗi cụ thể
+        if 'timeout' in error_msg.lower():
+            return {'success': False, 'message': 'Upload timeout. Please try again with a smaller image.'}
+        elif 'connection' in error_msg.lower():
+            return {'success': False, 'message': 'Connection error. Please check your internet connection.'}
+        elif 'cloudinary' in error_msg.lower():
+            return {'success': False, 'message': 'Cloudinary service error. Please try again later.'}
+        else:
+            return {'success': False, 'message': f'Upload error: {error_msg}'}
 
+
+# ── Predict từ imageId ────────────────────────────────────────────────────────
 
 def predict_disease_by_image_id_service(
     user_id: str,
     image_id: str,
     img_size: int = 640,
-    conf_threshold: float = 0.25,
-    save_to_history: bool = True
+    conf_threshold: float = 0.001,  # Giảm xuống 0.001 để detect dễ hơn
 ) -> Dict[str, Any]:
     """
-    Predict benh tu imageId da luu trong collection images.
+    Chạy YOLO (best.pt) trên ảnh đã upload, lưu kết quả vào collection diagnoses.
 
-    Output:
-    {
+    Flow:
+      1. Lấy imageURL từ collection images
+      2. Download ảnh, chạy YOLO
+      3. Lưu kết quả đầy đủ vào diagnoses (bao gồm cả metadata lịch sử)
+      4. Tạo notification nếu bệnh nghiêm trọng
+
+    Returns:
+      {
         'success': True,
         'data': {
-            'inferenceId': '...'
-            'imageId': '...'
-            'summary': {'Rust': 40, 'Phoma': 1},
-            'diseaseID': ['Rust', 'Phoma']
+          'diagnosisId': '...',
+          'imageId': '...',
+          'imageUrl': '...',
+          'summary': {'Rust': 40},
+          'diseaseID': ['Rust'],
+          'primaryDisease': 'rust',
+          'primaryDiseaseName': 'Bệnh gỉ sắt',
+          'confidence': 0.92,
+          'severity': 'high',
+          'description': '...',
+          'treatment': '...',
+          'totalDetections': 40,
+          'processingTime': 1.23,
+          'createdAt': '...'
         }
-    }
+      }
     """
     try:
         if not image_id:
@@ -183,7 +256,6 @@ def predict_disease_by_image_id_service(
         image_meta = image_repo.get_image_metadata_by_id(image_id)
         if not image_meta:
             return {'success': False, 'message': 'Image not found'}
-
         if image_meta.get('userId') != user_id:
             return {'success': False, 'message': 'Access denied'}
 
@@ -191,6 +263,7 @@ def predict_disease_by_image_id_service(
         if not image_url:
             return {'success': False, 'message': 'imageURL is missing for this imageId'}
 
+        # Download và chạy YOLO
         response = requests.get(image_url, timeout=20)
         if response.status_code != 200:
             return {'success': False, 'message': f'Cannot download image (status={response.status_code})'}
@@ -198,570 +271,323 @@ def predict_disease_by_image_id_service(
         processed_image = _preprocess_image_for_model(response.content, img_size=img_size)
         prediction_result = _run_yolo_prediction(processed_image, img_size=img_size, conf_threshold=conf_threshold)
 
+        # Kiểm tra xem có phải lá cà phê không
+        is_valid = prediction_result.get('isValidCoffeeLeaf', True)
         summary = prediction_result.get('summary', {})
         detections = prediction_result.get('detections', [])
+        primary_disease_raw = prediction_result.get('primaryDisease', 'unknown')
+        primary_confidence = prediction_result.get('primaryConfidence', 0.0)
+        processing_time = prediction_result.get('processingTime', 0.0)
+        
+        # Validation logic nâng cao
+        total_detections = len(detections)
+        
+        print(f"[Validation] Total detections: {total_detections}")
+        print(f"[Validation] Primary confidence: {round(primary_confidence * 100, 1)}%")
+        
+        # Case 1: Không detect được gì → Không phải lá cà phê
+        if total_detections == 0:
+            print(f"[Validation] REJECTED: No detections")
+            return {
+                'success': False,
+                'message': '❌ Không phát hiện lá cà phê trong ảnh.\n\n📸 Vui lòng chụp lại với:\n• Ảnh lá cà phê rõ nét\n• Ánh sáng đầy đủ\n• Lá chiếm 70-80% khung hình'
+            }
+        
+        # Case 2: Confidence quá thấp (<20%) → Ảnh không rõ hoặc không phải lá cà phê
+        if primary_confidence < 0.20:
+            print(f"[Validation] REJECTED: Low confidence ({round(primary_confidence * 100, 1)}%)")
+            return {
+                'success': False,
+                'message': '❌ Không phải lá cà phê hoặc ảnh không rõ\n\n� Hướng dẫn chụp đúng:p\n• Chụp ảnh LÁ CÀ PHÊ thật\n• Ánh sáng tự nhiên, không quá tối/sáng\n• Lá lấp đầy khung hình\n• Camera focus rõ nét'
+            }
+        
+        # Case 3: Detect quá ít objects (<2) và confidence thấp (20-40%) → Nghi ngờ
+        if total_detections < 2 and primary_confidence < 0.40:
+            print(f"[Validation] REJECTED: Few detections ({total_detections}) with medium confidence ({round(primary_confidence * 100, 1)}%)")
+            return {
+                'success': False,
+                'message': '⚠️ Phát hiện không rõ ràng\n\n Để cải thiện:\n• Chụp nhiều lá cà phê hơn trong 1 ảnh\n• Tăng ánh sáng\n• Đảm bảo lá không bị mờ/nhòe\n• Giữ camera ổn định khi chụp'
+            }
+        
+        # Case 4: OK - Tiếp tục xử lý
+        print(f"[Validation] PASSED: {total_detections} detections, {round(primary_confidence * 100, 1)}% confidence")
+        
+        if not is_valid and primary_disease_raw in ['not_coffee_leaf', 'unknown']:
+            print(f"[Validation] REJECTED: Invalid coffee leaf flag")
+            return {
+                'success': False,
+                'message': '❌ Không thể nhận diện ảnh.\n\nVui lòng chụp ảnh lá cà phê với điều kiện tốt hơn.'
+            }
+
+        primary_key = primary_disease_raw.lower()
+        disease_info = _get_disease_info(primary_key)
 
         raw_disease_ids = list(summary.keys())
         disease_ids = _filter_existing_disease_ids(raw_disease_ids)
 
-        diagnosis_id = None
-        history_id = None
+        # Format treatment text từ steps và medicine
+        treatment_text = ""
+        if disease_info.get('steps'):
+            treatment_text += "Các bước điều trị:\n"
+            for i, step in enumerate(disease_info['steps'], 1):
+                treatment_text += f"{i}. {step}\n"
+        
+        if disease_info.get('medicine'):
+            treatment_text += "\nThuốc điều trị:\n"
+            for i, med in enumerate(disease_info['medicine'], 1):
+                treatment_text += f"• {med}\n"
+        
+        # Lưu vào diagnoses (gộp cả metadata lịch sử)
+        diagnosis_data = {
+            'diseaseKey': primary_key,
+            'diseaseName': disease_info['name'],
+            'diseaseNameVi': disease_info['name'],  # Sử dụng name thay vì name_vi
+            'confidence': primary_confidence,
+            'description': disease_info['description'],
+            'treatment': treatment_text.strip() or 'No treatment information available',
+            'severity': disease_info['severity'],
+            'color': disease_info['color'],
+            'imageUrl': image_url,
+            'imageId': image_id,
+            'summary': summary,
+            'detections': detections,
+            'diseaseIDs': disease_ids,
+            'modelVersion': 'best.pt',
+            'processingTime': processing_time,
+        }
 
-        if save_to_history:
-            primary_disease = prediction_result.get('primaryDisease')
-            primary_confidence = prediction_result.get('primaryConfidence', 0.0)
+        diagnosis_id = diagnosis_repo.insert_diagnosis(user_id, diagnosis_data)
+        if not diagnosis_id:
+            return {'success': False, 'message': 'Failed to save diagnosis'}
 
-            primary_info = SUPPORTED_DISEASES.get((primary_disease or '').lower(), SUPPORTED_DISEASES['healthy'])
-            diagnosis_data = {
-                'diseaseKey': (primary_disease or 'healthy').lower(),
-                'diseaseName': primary_info['name'],
-                'diseaseNameVi': primary_info['name_vi'],
-                'confidence': primary_confidence,
-                'description': primary_info['description'],
-                'treatment': primary_info['treatment'],
-                'severity': primary_info['severity'],
-                'imageUrl': image_url,
-                'modelVersion': 'version1.pt',
-                'processingTime': prediction_result.get('processingTime', 0.0),
-                'imageId': image_id,
-                'summary': summary,
-                'detections': detections,
-                'diseaseIDs': disease_ids,
-            }
-
-            diagnosis_id = diagnosis_repo.insert_diagnosis(user_id, diagnosis_data)
-            if not diagnosis_id:
-                return {'success': False, 'message': 'Failed to save diagnosis'}
-
-            history_data = {
-                'imageId': image_id,
-                'predictions': {
-                    'summary': summary,
-                    'diseaseID': disease_ids,
-                    'primaryDisease': primary_disease,
-                    'confidence': primary_confidence,
-                }
-            }
-            history_id = history_repo.insert_history(user_id, diagnosis_id, history_data)
+        # Notification nếu bệnh nghiêm trọng
+        if disease_info['severity'] == 'high':
+            notification_repo.insert_notification(user_id, {
+                'type': 'diagnosis_alert',
+                'title': '⚠️ Phát hiện bệnh nghiêm trọng!',
+                'message': f'Cây cà phê của bạn có thể bị {disease_info["name"]}. Vui lòng xử lý ngay!',
+                'data': {'diagnosisId': diagnosis_id, 'diseaseKey': primary_key, 'severity': 'high'},
+            })
 
         return {
             'success': True,
             'data': {
-                'inferenceId': history_id or diagnosis_id,
                 'diagnosisId': diagnosis_id,
-                'historyId': history_id,
                 'imageId': image_id,
+                'imageUrl': image_url,
                 'summary': summary,
                 'diseaseID': disease_ids,
+                'primaryDisease': primary_key,
+                'primaryDiseaseName': disease_info['name'],
+                'confidence': primary_confidence,
+                'severity': disease_info['severity'],
+                'color': disease_info['color'],
+                'description': disease_info['description'],
+                'treatment': treatment_text.strip() or 'No treatment information available',
                 'totalDetections': sum(summary.values()),
-                'imgSize': img_size,
+                'processingTime': processing_time,
+                'createdAt': datetime.utcnow().isoformat(),
             }
         }
     except Exception as e:
         print(f"Error in predict_disease_by_image_id_service: {e}")
-        return {
-            'success': False,
-            'message': f'Error: {str(e)}'
-        }
+        return {'success': False, 'message': f'Error: {str(e)}'}
 
 
-def predict_disease_from_image_service(
-    user_id: str,
-    image_file: Any,
-    save_to_history: bool = True
-) -> Dict[str, Any]:
+# ── Lấy danh sách lịch sử chẩn đoán ─────────────────────────────────────────
+
+def list_diagnoses_service(user_id: str, page: int = 1, limit: int = 10) -> Dict[str, Any]:
     """
-    Chẩn đoán bệnh từ ảnh lá cà phê.
-    
-    Flow:
-    1. Upload ảnh lên Firebase Storage
-    2. Gọi AI model để dự đoán (giả lập)
-    3. Lưu kết quả vào diagnoses (full detail)
-    4. Lưu metadata vào history (link to diagnosis)
-    5. Tạo notification nếu phát hiện bệnh nghiêm trọng
-    
-    Args:
-        user_id: ID người dùng
-        image_file: File ảnh (từ multipart/form-data)
-        save_to_history: Có lưu vào lịch sử không (default: True)
-    
-    Returns:
-        Dict chứa kết quả chẩn đoán
+    Lấy danh sách lịch sử chẩn đoán của user (có phân trang).
+    Thay thế hoàn toàn GET /api/history.
     """
     try:
-        # 1. Upload ảnh lên Firebase Storage (nếu bucket/billing chưa sẵn sàng vẫn chẩn đoán được)
-        # FastAPI UploadFile cần đọc bytes trước khi gửi vào storage repository.
-        file_bytes = image_file.file.read() if hasattr(image_file, 'file') else image_file
-        image_url = storage_repo.upload_diagnosis_image(user_id, file_bytes)
-        storage_skipped = False
-        if not image_url:
-            storage_skipped = True
-            image_url = ''
-            print(
-                "Firebase Storage upload skipped: enable Billing + Storage in Firebase Console, "
-                "or set FIREBASE_STORAGE_BUCKET in .env. Continuing diagnosis without stored image."
-            )
-
-        # 2. Gọi AI model để dự đoán bệnh
-        # TODO: Thay bằng model thật
-        prediction_result = _mock_ai_prediction(image_url or 'local')
-        
-        disease_key = prediction_result['disease_key']
-        confidence = prediction_result['confidence']
-        processing_time = prediction_result.get('processing_time', 1.5)
-        
-        # 3. Lấy thông tin chi tiết về bệnh
-        disease_info = SUPPORTED_DISEASES.get(disease_key, SUPPORTED_DISEASES['healthy'])
-        
-        # 4. Chuẩn bị dữ liệu chẩn đoán đầy đủ
-        diagnosis_data = {
-            'diseaseKey': disease_key,
-            'diseaseName': disease_info['name'],
-            'diseaseNameVi': disease_info['name_vi'],
-            'confidence': confidence,
-            'description': disease_info['description'],
-            'treatment': disease_info['treatment'],
-            'severity': disease_info['severity'],
-            'imageUrl': image_url if image_url else None,
-            'modelVersion': 'v1.0',
-            'processingTime': processing_time
-        }
-        
-        # 5. Lưu vào diagnoses (full detail)
-        diagnosis_id = None
-        history_id = None
-        
-        if save_to_history:
-            diagnosis_id = diagnosis_repo.insert_diagnosis(user_id, diagnosis_data)
-            
-            if not diagnosis_id:
-                return {
-                    'success': False,
-                    'message': 'Failed to save diagnosis'
-                }
-            
-            # 6. Lưu metadata vào history (link to diagnosis)
-            history_data = {
-                'imageId': (
-                    image_url.split('/')[-1]
-                    if image_url
-                    else f'local_{diagnosis_id}'
-                ),
-                'predictions': {
-                    'disease': disease_key,
-                    'confidence': confidence
-                }
-            }
-            
-            history_id = history_repo.insert_history(user_id, diagnosis_id, history_data)
-            
-            # 7. Tạo notification nếu phát hiện bệnh nghiêm trọng
-            if disease_info['severity'] == 'high':
-                notification_repo.insert_notification(user_id, {
-                    'type': 'diagnosis_alert',
-                    'title': '⚠️ Phát hiện bệnh nghiêm trọng!',
-                    'message': f'Cây cà phê của bạn có thể bị {disease_info["name_vi"]}. Vui lòng xử lý ngay!',
-                    'data': {
-                        'diagnosisId': diagnosis_id,
-                        'historyId': history_id,
-                        'diseaseKey': disease_key,
-                        'severity': 'high'
-                    }
-                })
-        
-        # 8. Trả về kết quả
-        out = {
-            'success': True,
-            'diagnosis_id': diagnosis_id,
-            'history_id': history_id,
-            'disease': {
-                'key': disease_key,
-                'name': disease_info['name'],
-                'name_vi': disease_info['name_vi'],
-                'confidence': confidence,
-                'severity': disease_info['severity'],
-                'color': disease_info['color']
-            },
-            'description': disease_info['description'],
-            'treatment': disease_info['treatment'],
-            'image_url': image_url if image_url else None,
-            'processing_time': processing_time,
-            'created_at': datetime.utcnow().isoformat()
-        }
-        if storage_skipped:
-            out['storage_skipped'] = True
-            out['message'] = (
-                'Chẩn đoán đã lưu nhưng ảnh không upload được. '
-                'Bật thanh toán (Billing) trên Google Cloud, mở Firebase Storage trong Console, '
-                'hoặc đặt FIREBASE_STORAGE_BUCKET đúng tên bucket GCS.'
-            )
-        return out
-
-    except Exception as e:
-        print(f"Error in predict_disease_from_image_service: {e}")
-        return {
-            'success': False,
-            'message': f'Error: {str(e)}'
-        }
-
-
-def get_diagnosis_history_service(user_id: str, limit: int = 20, offset: int = 0) -> Dict[str, Any]:
-    """
-    Lấy lịch sử chẩn đoán của user.
-    
-    Returns:
-        Danh sách lịch sử chẩn đoán, sắp xếp theo thời gian mới nhất
-    """
-    try:
+        offset = (page - 1) * limit
         diagnoses = diagnosis_repo.query_diagnoses_by_user(user_id, limit=limit, offset=offset)
-        
-        # Format lại dữ liệu cho frontend
-        formatted_diagnoses = []
-        for diagnosis in diagnoses:
-            formatted_diagnoses.append({
-                'id': diagnosis['id'],
-                'disease': {
-                    'key': diagnosis.get('diseaseKey'),
-                    'name': diagnosis.get('diseaseName'),
-                    'name_vi': diagnosis.get('diseaseNameVi'),
-                    'severity': diagnosis.get('severity')
-                },
-                'confidence': diagnosis.get('confidence'),
-                'image_url': diagnosis.get('imageUrl'),
-                'created_at': diagnosis.get('createdAt').isoformat() if diagnosis.get('createdAt') else None
+
+        result = []
+        for d in diagnoses:
+            created_at = d.get('createdAt')
+            result.append({
+                'diagnosisId': d['id'],
+                'diseaseKey': d.get('diseaseKey'),
+                'diseaseName': d.get('diseaseNameVi') or d.get('diseaseName'),
+                'confidence': d.get('confidence'),
+                'severity': d.get('severity'),
+                'color': d.get('color'),
+                'imageUrl': d.get('imageUrl'),
+                'imageId': d.get('imageId'),
+                'summary': d.get('summary', {}),
+                'createdAt': created_at.isoformat() if hasattr(created_at, 'isoformat') else str(created_at) if created_at else None,
             })
-        
-        return {
-            'success': True,
-            'diagnoses': formatted_diagnoses,
-            'total': len(formatted_diagnoses)
-        }
-        
+
+        return {'success': True, 'data': result, 'page': page, 'total': len(result)}
     except Exception as e:
-        print(f"Error in get_diagnosis_history_service: {e}")
-        return {
-            'success': False,
-            'message': f'Error: {str(e)}'
-        }
+        print(f"Error in list_diagnoses_service: {e}")
+        return {'success': False, 'message': f'Error: {str(e)}'}
 
 
-def get_diagnosis_detail_service(diagnosis_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+# ── Lấy chi tiết một chẩn đoán ───────────────────────────────────────────────
+
+def get_diagnosis_detail_service(diagnosis_id: str, user_id: str) -> Dict[str, Any]:
     """
-    Lấy chi tiết một kết quả chẩn đoán.
-    
-    Args:
-        diagnosis_id: ID của diagnosis
-        user_id: ID người dùng (để kiểm tra quyền)
+    Lấy chi tiết đầy đủ một kết quả chẩn đoán.
+    Thay thế GET /api/history/{id}.
     """
     try:
         diagnosis = diagnosis_repo.get_diagnosis_by_id(diagnosis_id)
-        
         if not diagnosis:
-            return None
-        
-        # Kiểm tra quyền sở hữu
+            return {'success': False, 'message': 'Diagnosis not found'}
         if diagnosis.get('userId') != user_id:
-            return None
-        
-        return {
-            'success': True,
-            'diagnosis': {
-                'id': diagnosis['id'],
-                'disease': {
-                    'key': diagnosis.get('diseaseKey'),
-                    'name': diagnosis.get('diseaseName'),
-                    'name_vi': diagnosis.get('diseaseNameVi'),
-                    'severity': diagnosis.get('severity')
-                },
-                'confidence': diagnosis.get('confidence'),
-                'description': diagnosis.get('description'),
-                'treatment': diagnosis.get('treatment'),
-                'image_url': diagnosis.get('imageUrl'),
-                'model_version': diagnosis.get('modelVersion'),
-                'processing_time': diagnosis.get('processingTime'),
-                'created_at': diagnosis.get('createdAt').isoformat() if diagnosis.get('createdAt') else None
-            }
-        }
-        
-    except Exception as e:
-        print(f"Error in get_diagnosis_detail_service: {e}")
-        return None
-
-
-def get_inference_detail_service(inference_id: str, user_id: str) -> Dict[str, Any]:
-    """
-    Lấy chi tiết kết quả theo inference id (id từ predict trả về).
-
-    Response format:
-        {
-            'success': True,
-            'data': {
-                'imageId': '...',
-                'diseaseID': ['rust']
-            }
-        }
-    """
-    try:
-        def _extract_disease_ids_from_diagnosis(diagnosis_doc: Dict[str, Any]) -> List[str]:
-            """Ưu tiên field diseaseID (array), fallback field cũ để tương thích dữ liệu cũ."""
-            if not diagnosis_doc:
-                return []
-
-            # Field mới mong muốn: diseaseID = ["Rust", "Miner"]
-            disease_ids = diagnosis_doc.get('diseaseID')
-            if isinstance(disease_ids, list):
-                return [x for x in disease_ids if isinstance(x, str) and x]
-
-            # Backward-compatible với dữ liệu từng lưu là diseaseIDs
-            legacy_disease_ids = diagnosis_doc.get('diseaseIDs')
-            if isinstance(legacy_disease_ids, list):
-                return [x for x in legacy_disease_ids if isinstance(x, str) and x]
-
-            # Backward-compatible kiểu cũ chỉ có diseaseKey
-            disease_key = diagnosis_doc.get('diseaseKey')
-            if isinstance(disease_key, str) and disease_key:
-                return [disease_key]
-
-            return []
-
-        history = history_repo.get_history_by_id(inference_id)
-
-        # Nếu không tìm thấy theo inference id, fallback thử coi như diagnosis id
-        if not history:
-            diagnosis = diagnosis_repo.get_diagnosis_by_id(inference_id)
-            if not diagnosis:
-                return {'success': False, 'message': 'Inference not found'}
-
-            if diagnosis.get('userId') != user_id:
-                return {'success': False, 'message': 'Access denied'}
-
-            diagnosis_disease_ids = _extract_disease_ids_from_diagnosis(diagnosis)
-            return {
-                'success': True,
-                'data': {
-                    'imageId': diagnosis.get('imageUrl') or '',
-                    'diseaseID': diagnosis_disease_ids
-                }
-            }
-
-        if history.get('userId') != user_id:
             return {'success': False, 'message': 'Access denied'}
 
-        image_id = history.get('imageId') or ''
-        predictions = history.get('predictions') or {}
-        disease_from_history = predictions.get('disease')
-        disease_ids_from_history = predictions.get('diseaseID') or []
-
-        disease_ids: List[str] = []
-
-        diagnosis_id = history.get('diagnosisId')
-        if diagnosis_id:
-            diagnosis = diagnosis_repo.get_diagnosis_by_id(diagnosis_id)
-            if diagnosis and diagnosis.get('userId') == user_id:
-                diagnosis_disease_ids = _extract_disease_ids_from_diagnosis(diagnosis)
-                if diagnosis_disease_ids:
-                    disease_ids.extend(diagnosis_disease_ids)
-
-                if not image_id:
-                    image_id = diagnosis.get('imageUrl') or ''
-
-        # Fallback dùng summary disease trong history nếu diagnosis không có
-        if not disease_ids and isinstance(disease_ids_from_history, list):
-            disease_ids.extend([x for x in disease_ids_from_history if isinstance(x, str) and x])
-
-        if not disease_ids and disease_from_history:
-            disease_ids.append(disease_from_history)
-
+        created_at = diagnosis.get('createdAt')
         return {
             'success': True,
             'data': {
-                'imageId': image_id,
-                'diseaseID': disease_ids
+                'diagnosisId': diagnosis['id'],
+                'diseaseKey': diagnosis.get('diseaseKey'),
+                'diseaseName': diagnosis.get('diseaseName'),
+                'diseaseNameVi': diagnosis.get('diseaseNameVi'),
+                'confidence': diagnosis.get('confidence'),
+                'severity': diagnosis.get('severity'),
+                'color': diagnosis.get('color'),
+                'description': diagnosis.get('description'),
+                'treatment': diagnosis.get('treatment'),
+                'imageUrl': diagnosis.get('imageUrl'),
+                'imageId': diagnosis.get('imageId'),
+                'summary': diagnosis.get('summary', {}),
+                'diseaseIDs': diagnosis.get('diseaseIDs', []),
+                'detections': diagnosis.get('detections', []),
+                'modelVersion': diagnosis.get('modelVersion'),
+                'processingTime': diagnosis.get('processingTime'),
+                'createdAt': created_at.isoformat() if hasattr(created_at, 'isoformat') else str(created_at) if created_at else None,
             }
         }
-
     except Exception as e:
-        print(f"Error in get_inference_detail_service: {e}")
-        return {
-            'success': False,
-            'message': f'Error: {str(e)}'
-        }
+        print(f"Error in get_diagnosis_detail_service: {e}")
+        return {'success': False, 'message': f'Error: {str(e)}'}
 
+
+# ── Xóa một chẩn đoán ────────────────────────────────────────────────────────
+
+def delete_diagnosis_service(diagnosis_id: str, user_id: str) -> Dict[str, Any]:
+    """Xóa một kết quả chẩn đoán. Thay thế DELETE /api/history/{id}."""
+    try:
+        success = diagnosis_repo.delete_diagnosis_by_id(diagnosis_id, user_id)
+        if success:
+            return {'success': True, 'message': 'Diagnosis deleted successfully'}
+        return {'success': False, 'message': 'Diagnosis not found or unauthorized'}
+    except Exception as e:
+        print(f"Error in delete_diagnosis_service: {e}")
+        return {'success': False, 'message': f'Error: {str(e)}'}
+
+
+# ── Xóa toàn bộ chẩn đoán của user ──────────────────────────────────────────
+
+def delete_all_diagnoses_service(user_id: str) -> Dict[str, Any]:
+    """Xóa toàn bộ lịch sử chẩn đoán. Thay thế DELETE /api/history."""
+    try:
+        all_docs = diagnosis_repo.query_diagnoses_by_user(user_id, limit=10000)
+        count = len(all_docs)
+        success = diagnosis_repo.delete_all_diagnoses_of_user(user_id)
+        if not success:
+            return {'success': False, 'message': 'Failed to clear diagnoses'}
+        return {'success': True, 'count': count}
+    except Exception as e:
+        print(f"Error in delete_all_diagnoses_service: {e}")
+        return {'success': False, 'message': f'Error: {str(e)}'}
+
+
+# ── Thông tin bệnh ────────────────────────────────────────────────────────────
 
 def get_disease_info_service(disease_id: str) -> Dict[str, Any]:
-    """
-    Lấy thông tin bệnh từ collection diseases.
-
-    Response format:
-        {
-            'success': True,
-            'data': {
-                'name': '...',
-                'description': '...'
-            }
-        }
-    """
+    """Lấy thông tin bệnh từ collection diseases."""
     try:
         disease = diagnosis_repo.get_disease_by_id(disease_id)
         if not disease:
             return {'success': False, 'message': 'Disease not found'}
-
         return {
             'success': True,
             'data': {
                 'name': disease.get('name') or disease.get('diseaseName') or '',
-                'description': disease.get('description') or ''
+                'description': disease.get('description') or '',
             }
         }
     except Exception as e:
         print(f"Error in get_disease_info_service: {e}")
-        return {
-            'success': False,
-            'message': f'Error: {str(e)}'
-        }
-
-
-def delete_diagnosis_service(diagnosis_id: str, user_id: str) -> Dict[str, Any]:
-    """Xóa một kết quả chẩn đoán khỏi lịch sử."""
-    try:
-        success = diagnosis_repo.delete_diagnosis_by_id(diagnosis_id, user_id)
-        
-        if success:
-            return {
-                'success': True,
-                'message': 'Diagnosis deleted successfully'
-            }
-        
-        return {
-            'success': False,
-            'message': 'Diagnosis not found or unauthorized'
-        }
-        
-    except Exception as e:
-        print(f"Error in delete_diagnosis_service: {e}")
-        return {
-            'success': False,
-            'message': f'Error: {str(e)}'
-        }
+        return {'success': False, 'message': f'Error: {str(e)}'}
 
 
 def list_supported_diseases_service() -> Dict[str, Any]:
     """Danh sách các bệnh cà phê được model hỗ trợ."""
-    diseases = []
-    for key, info in SUPPORTED_DISEASES.items():
-        diseases.append({
-            'key': key,
-            'name': info['name'],
-            'name_vi': info['name_vi'],
-            'description': info['description'],
-            'severity': info['severity'],
-            'color': info['color']
-        })
-    
-    return {
-        'success': True,
-        'diseases': diseases,
-        'total': len(diseases)
-    }
+    try:
+        diseases_dict = _load_diseases_from_firestore()
+        treatments_dict = _load_treatments_from_firestore()
+        
+        diseases = []
+        for key, disease in diseases_dict.items():
+            treatment = treatments_dict.get(key, {})
+            diseases.append({
+                'key': key,
+                'name': disease.get('name', ''),
+                'description': disease.get('description', ''),
+                'severity': treatment.get('severity', 'none'),
+                'color': treatment.get('color', '#9E9E9E'),
+            })
+        
+        return {'success': True, 'diseases': diseases, 'total': len(diseases)}
+    except Exception as e:
+        print(f"Error in list_supported_diseases_service: {e}")
+        return {'success': False, 'message': f'Error: {str(e)}', 'diseases': [], 'total': 0}
 
 
 def get_diagnosis_statistics_service(user_id: str) -> Dict[str, Any]:
-    """
-    Thống kê lịch sử chẩn đoán của user.
-    
-    Returns:
-        - Tổng số lần chẩn đoán
-        - Số lần phát hiện bệnh
-        - Bệnh phổ biến nhất
-    """
+    """Thống kê lịch sử chẩn đoán của user."""
     try:
-        # Lấy tất cả diagnoses
-        all_diagnoses = diagnosis_repo.query_diagnoses_by_user(user_id, limit=1000)
-        
-        total_diagnoses = len(all_diagnoses)
-        disease_counts = {}
+        all_diagnoses = diagnosis_repo.query_diagnoses_by_user(user_id, limit=10000)
+        total = len(all_diagnoses)
+        disease_counts: Dict[str, int] = {}
         severity_counts = {'none': 0, 'low': 0, 'medium': 0, 'high': 0}
-        
-        for diagnosis in all_diagnoses:
-            disease_key = diagnosis.get('diseaseKey', 'unknown')
-            severity = diagnosis.get('severity', 'none')
-            
-            disease_counts[disease_key] = disease_counts.get(disease_key, 0) + 1
-            severity_counts[severity] = severity_counts.get(severity, 0) + 1
-        
-        # Tìm bệnh phổ biến nhất
-        most_common_disease = None
+
+        for d in all_diagnoses:
+            key = d.get('diseaseKey', 'unknown')
+            sev = d.get('severity', 'none')
+            disease_counts[key] = disease_counts.get(key, 0) + 1
+            severity_counts[sev] = severity_counts.get(sev, 0) + 1
+
+        most_common = None
         if disease_counts:
-            most_common_key = max(disease_counts, key=disease_counts.get)
-            disease_info = SUPPORTED_DISEASES.get(most_common_key)
-            if disease_info:
-                most_common_disease = {
-                    'key': most_common_key,
-                    'name_vi': disease_info['name_vi'],
-                    'count': disease_counts[most_common_key]
-                }
-        
+            top_key = max(disease_counts, key=disease_counts.get)
+            info = _get_disease_info(top_key)
+            if info:
+                most_common = {'key': top_key, 'name': info['name'], 'count': disease_counts[top_key]}
+
         return {
             'success': True,
             'statistics': {
-                'total_diagnoses': total_diagnoses,
+                'total': total,
                 'healthy_count': disease_counts.get('healthy', 0),
-                'diseased_count': total_diagnoses - disease_counts.get('healthy', 0),
+                'diseased_count': total - disease_counts.get('healthy', 0),
                 'severity_counts': severity_counts,
-                'most_common_disease': most_common_disease,
-                'disease_breakdown': disease_counts
+                'most_common_disease': most_common,
+                'disease_breakdown': disease_counts,
             }
         }
-        
     except Exception as e:
         print(f"Error in get_diagnosis_statistics_service: {e}")
-        return {
-            'success': False,
-            'message': f'Error: {str(e)}'
-        }
+        return {'success': False, 'message': f'Error: {str(e)}'}
 
 
-# ============================================================================
-# HELPER FUNCTIONS
-# ============================================================================
-
-def _mock_ai_prediction(image_url: str) -> Dict[str, Any]:
-    """
-    Mock AI prediction (giả lập).
-    TODO: Thay bằng model AI thật.
-    
-    Returns:
-        {
-            'disease_key': 'rust',
-            'confidence': 0.95,
-            'processing_time': 1.5
-        }
-    """
-    import random
-    
-    # Giả lập kết quả dự đoán
-    diseases = list(SUPPORTED_DISEASES.keys())
-    disease_key = random.choice(diseases)
-    confidence = round(random.uniform(0.7, 0.99), 2)
-    processing_time = round(random.uniform(0.5, 3.0), 2)
-    
-    return {
-        'disease_key': disease_key,
-        'confidence': confidence,
-        'processing_time': processing_time
-    }
-
+# ── YOLO helpers ──────────────────────────────────────────────────────────────
 
 def _load_yolo_model():
-    """Lazy-load YOLO model from backend/predict_models/version1.pt."""
+    """Lazy-load YOLO model từ best.pt."""
     global _YOLO_MODEL
-
     if _YOLO_MODEL is not None:
         return _YOLO_MODEL
-
     if not os.path.exists(MODEL_PATH):
         raise FileNotFoundError(f'Model file not found: {MODEL_PATH}')
-
     ultralytics = importlib.import_module('ultralytics')
     _YOLO_MODEL = ultralytics.YOLO(MODEL_PATH)
     return _YOLO_MODEL
@@ -769,102 +595,858 @@ def _load_yolo_model():
 
 def _preprocess_image_for_model(image_bytes: bytes, img_size: int = 640) -> Image.Image:
     """
-    Read and resize image to fixed size before model inference.
+    Tiền xử lý ảnh ULTRA OPTIMIZED - Tối ưu tối đa cho confidence cao.
+    
+    Chiến lược AGGRESSIVE:
+    1. Tight crop - Chỉ giữ vùng lá chính (bỏ background)
+    2. Strong CLAHE - Tăng contrast mạnh
+    3. Aggressive color boost - Làm nổi bật vết bệnh tối đa
+    4. Strong sharpening - Làm rõ viền vết bệnh
+    5. High contrast - Tăng độ tương phản cao
     """
-    image = Image.open(BytesIO(image_bytes)).convert('RGB')
-    return image.resize((img_size, img_size))
+    try:
+        from PIL import ImageEnhance
+        import numpy as np
+        import cv2
+        
+        print(f"[Preprocess] Starting MINIMAL preprocessing...")
+        
+        # Load ảnh
+        image = Image.open(BytesIO(image_bytes)).convert('RGB')
+        original_size = image.size
+        print(f"[Preprocess] Original: {original_size}")
+        
+        # MINIMAL preprocessing - Chỉ resize và enhance nhẹ
+        # Không crop, không CLAHE phức tạp
+        
+        # STEP 1: Resize trước để xử lý nhanh hơn
+        image = image.resize((img_size, img_size), Image.Resampling.LANCZOS)
+        print(f"[Preprocess] Resized to: {img_size}x{img_size}")
+        
+        # STEP 2: Tăng sharpness nhẹ
+        enhancer = ImageEnhance.Sharpness(image)
+        image = enhancer.enhance(1.3)
+        print(f"[Preprocess] Sharpness enhanced")
+        
+        # STEP 3: Tăng contrast nhẹ
+        enhancer = ImageEnhance.Contrast(image)
+        image = enhancer.enhance(1.2)
+        print(f"[Preprocess] Contrast enhanced")
+        
+        # STEP 4: Tăng color nhẹ
+        enhancer = ImageEnhance.Color(image)
+        image = enhancer.enhance(1.2)
+        print(f"[Preprocess] Color enhanced")
+        
+        print(f"[Preprocess] ✅ MINIMAL preprocessing completed")
+        
+        return image
+        
+    except Exception as e:
+        print(f"[Preprocess] ERROR: {e}")
+        print(f"[Preprocess] Fallback to standard preprocessing")
+        try:
+            image = Image.open(BytesIO(image_bytes)).convert('RGB')
+            
+            # Standard enhancement
+            enhancer = ImageEnhance.Sharpness(image)
+            image = enhancer.enhance(1.5)
+            
+            enhancer = ImageEnhance.Color(image)
+            image = enhancer.enhance(1.3)
+            
+            enhancer = ImageEnhance.Contrast(image)
+            image = enhancer.enhance(1.2)
+            
+            return image.resize((img_size, img_size), Image.Resampling.LANCZOS)
+        except:
+            image = Image.open(BytesIO(image_bytes)).convert('RGB')
+            return image.resize((img_size, img_size), Image.Resampling.LANCZOS)
 
 
-def _run_yolo_prediction(image: Image.Image, img_size: int = 640, conf_threshold: float = 0.25) -> Dict[str, Any]:
+def _aggressive_smart_crop(image: Image.Image) -> Image.Image:
     """
-    Run YOLO prediction and convert detections to summary format.
+    AGGRESSIVE Smart Crop - Crop SÁT vào lá, bỏ hết background.
+    
+    Strategy:
+    1. Detect leaf regions với threshold cao
+    2. Crop TIGHT vào vùng lá chính (padding chỉ 10%)
+    3. Minimum crop 30% (không chấp nhận crop quá nhỏ)
+    4. Fallback to tight center crop
     """
+    try:
+        import numpy as np
+        import cv2
+        
+        img_array = np.array(image)
+        height, width = img_array.shape[:2]
+        
+        # Convert to HSV
+        hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
+        
+        # Detect GREEN leaves (healthy) - Threshold cao hơn
+        lower_green = np.array([35, 30, 30])
+        upper_green = np.array([80, 255, 255])
+        mask_green = cv2.inRange(hsv, lower_green, upper_green)
+        
+        # Detect YELLOW/BROWN (diseased) - QUAN TRỌNG
+        lower_yellow = np.array([15, 30, 30])
+        upper_yellow = np.array([35, 255, 255])
+        mask_yellow = cv2.inRange(hsv, lower_yellow, upper_yellow)
+        
+        # Detect BROWN/RED (severe)
+        lower_brown = np.array([0, 30, 30])
+        upper_brown = np.array([15, 255, 255])
+        mask_brown = cv2.inRange(hsv, lower_brown, upper_brown)
+        
+        # Combine masks
+        mask = cv2.bitwise_or(mask_green, mask_yellow)
+        mask = cv2.bitwise_or(mask, mask_brown)
+        
+        # Morphological operations - Mạnh hơn
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15))
+        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+        
+        # Find contours
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        if contours:
+            # Get largest contour
+            largest = max(contours, key=cv2.contourArea)
+            x, y, w, h = cv2.boundingRect(largest)
+            
+            # TIGHT padding - CHỈ 10% để crop sát
+            margin_x = int(w * 0.10)
+            margin_y = int(h * 0.10)
+            
+            x = max(0, x - margin_x)
+            y = max(0, y - margin_y)
+            w = min(width - x, w + 2 * margin_x)
+            h = min(height - y, h + 2 * margin_y)
+            
+            # Validate - Chấp nhận từ 30% trở lên
+            crop_ratio = (w * h) / (width * height)
+            
+            if crop_ratio >= 0.30:
+                cropped = image.crop((x, y, x + w, y + h))
+                print(f"[Crop] ✅ TIGHT crop: {width}x{height} → {w}x{h} ({round(crop_ratio*100)}% retained)")
+                return cropped
+            else:
+                print(f"[Crop] ⚠️ Crop too small ({round(crop_ratio*100)}%), using tight center crop")
+        else:
+            print(f"[Crop] ⚠️ No leaf detected, using tight center crop")
+        
+        # Fallback: Tight center crop 85% - Bỏ nhiều background
+        margin = 0.075
+        x = int(width * margin)
+        y = int(height * margin)
+        w = int(width * (1 - 2 * margin))
+        h = int(height * (1 - 2 * margin))
+        
+        print(f"[Crop] Tight center crop 85%: {width}x{height} → {w}x{h}")
+        return image.crop((x, y, x + w, y + h))
+        
+    except Exception as e:
+        print(f"[Crop] ERROR: {e}, returning original")
+        return image
+
+
+def _strong_clahe(img_array: np.ndarray) -> np.ndarray:
+    """
+    STRONG CLAHE - CLAHE mạnh để tăng contrast tối đa.
+    """
+    try:
+        import cv2
+        
+        # Convert to LAB
+        lab = cv2.cvtColor(img_array, cv2.COLOR_RGB2LAB)
+        l, a, b = cv2.split(lab)
+        
+        # STRONG CLAHE với clip limit cao (3.5)
+        clahe = cv2.createCLAHE(clipLimit=3.5, tileGridSize=(8, 8))
+        l = clahe.apply(l)
+        
+        # Tăng A, B channels mạnh hơn
+        a = np.clip(a * 1.08, 0, 255).astype(np.uint8)
+        b = np.clip(b * 1.08, 0, 255).astype(np.uint8)
+        
+        # Merge back
+        lab = cv2.merge([l, a, b])
+        rgb = cv2.cvtColor(lab, cv2.COLOR_LAB2RGB)
+        
+        return rgb
+    except Exception as e:
+        print(f"[CLAHE] Failed: {e}")
+        return img_array
+
+
+def _aggressive_enhance_disease_colors(img_array: np.ndarray) -> np.ndarray:
+    """
+    AGGRESSIVE Enhance Disease Colors - Tăng màu vùng bệnh TỐI ĐA.
+    """
+    try:
+        import cv2
+        
+        # Convert to HSV
+        hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
+        h, s, v = cv2.split(hsv)
+        
+        # Tăng saturation MẠNH ở vùng màu bệnh
+        # Hue 0-40: Red/Brown/Yellow (tất cả bệnh)
+        disease_mask = ((h >= 0) & (h <= 40)) | ((h >= 165) & (h <= 180))
+        
+        # Tăng saturation MẠNH (30%)
+        s = np.where(disease_mask, np.minimum(s * 1.30, 255), s).astype(np.uint8)
+        
+        # Tăng value để làm sáng vùng bệnh (15%)
+        v = np.where(disease_mask, np.minimum(v * 1.15, 255), v).astype(np.uint8)
+        
+        # Merge back
+        hsv = cv2.merge([h, s, v])
+        rgb = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
+        
+        return rgb
+    except Exception as e:
+        print(f"[EnhanceColors] Failed: {e}")
+        return img_array
+
+
+def _optimized_smart_crop(image: Image.Image) -> Image.Image:
+    """
+    Optimized Smart Crop V2 - Crop thông minh tập trung vào lá cà phê.
+    
+    Strategy:
+    1. Detect leaf regions (green + yellow/brown disease areas)
+    2. Find optimal bounding box with generous padding
+    3. Validate crop size (minimum 20% of original)
+    4. Fallback to center crop if detection fails
+    """
+    try:
+        import numpy as np
+        import cv2
+        
+        img_array = np.array(image)
+        height, width = img_array.shape[:2]
+        
+        # Convert to HSV for better color detection
+        hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
+        
+        # Detect GREEN leaves (healthy)
+        lower_green = np.array([30, 25, 25])
+        upper_green = np.array([85, 255, 255])
+        mask_green = cv2.inRange(hsv, lower_green, upper_green)
+        
+        # Detect YELLOW/BROWN (diseased areas) - QUAN TRỌNG cho detection
+        lower_yellow = np.array([12, 25, 25])
+        upper_yellow = np.array([38, 255, 255])
+        mask_yellow = cv2.inRange(hsv, lower_yellow, upper_yellow)
+        
+        # Detect BROWN/RED (severe disease)
+        lower_brown = np.array([0, 25, 25])
+        upper_brown = np.array([18, 255, 255])
+        mask_brown = cv2.inRange(hsv, lower_brown, upper_brown)
+        
+        # Combine all masks - Bao gồm cả vùng bệnh
+        mask = cv2.bitwise_or(mask_green, mask_yellow)
+        mask = cv2.bitwise_or(mask, mask_brown)
+        
+        # Morphological operations - Làm mịn mask
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (11, 11))
+        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+        
+        # Find contours
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        if contours:
+            # Get largest contour (main leaf area)
+            largest = max(contours, key=cv2.contourArea)
+            x, y, w, h = cv2.boundingRect(largest)
+            
+            # GENEROUS padding - 25% để giữ nhiều context
+            margin_x = int(w * 0.25)
+            margin_y = int(h * 0.25)
+            
+            x = max(0, x - margin_x)
+            y = max(0, y - margin_y)
+            w = min(width - x, w + 2 * margin_x)
+            h = min(height - y, h + 2 * margin_y)
+            
+            # Validate crop size - Chấp nhận crop từ 20% trở lên
+            crop_ratio = (w * h) / (width * height)
+            
+            if crop_ratio >= 0.20:
+                cropped = image.crop((x, y, x + w, y + h))
+                print(f"[Crop] ✅ Smart crop: {width}x{height} → {w}x{h} ({round(crop_ratio*100)}% retained)")
+                return cropped
+            else:
+                print(f"[Crop] ⚠️ Crop too small ({round(crop_ratio*100)}%), using center crop")
+        else:
+            print(f"[Crop] ⚠️ No leaf detected, using center crop")
+        
+        # Fallback: Center crop 92% - Giữ hầu hết ảnh, bỏ viền
+        margin = 0.04
+        x = int(width * margin)
+        y = int(height * margin)
+        w = int(width * (1 - 2 * margin))
+        h = int(height * (1 - 2 * margin))
+        
+        print(f"[Crop] Center crop 92%: {width}x{height} → {w}x{h}")
+        return image.crop((x, y, x + w, y + h))
+        
+    except Exception as e:
+        print(f"[Crop] ERROR: {e}, returning original")
+        return image
+
+
+def _balanced_clahe(img_array: np.ndarray) -> np.ndarray:
+    """
+    Balanced CLAHE - CLAHE cân bằng tối ưu cho detection.
+    Áp dụng trên LAB color space để giữ màu tự nhiên.
+    """
+    try:
+        import cv2
+        
+        # Convert to LAB
+        lab = cv2.cvtColor(img_array, cv2.COLOR_RGB2LAB)
+        l, a, b = cv2.split(lab)
+        
+        # CLAHE với clip limit cân bằng (2.2)
+        clahe = cv2.createCLAHE(clipLimit=2.2, tileGridSize=(8, 8))
+        l = clahe.apply(l)
+        
+        # Tăng nhẹ A, B channels để giữ màu
+        a = np.clip(a * 1.03, 0, 255).astype(np.uint8)
+        b = np.clip(b * 1.03, 0, 255).astype(np.uint8)
+        
+        # Merge back
+        lab = cv2.merge([l, a, b])
+        rgb = cv2.cvtColor(lab, cv2.COLOR_LAB2RGB)
+        
+        return rgb
+    except Exception as e:
+        print(f"[CLAHE] Failed: {e}")
+        return img_array
+
+
+def _enhance_disease_colors(img_array: np.ndarray) -> np.ndarray:
+    """
+    Enhance Disease Colors - Tăng cường màu vùng bệnh (vàng, nâu, đỏ).
+    Giúp model detect tốt hơn các vết bệnh.
+    """
+    try:
+        import cv2
+        
+        # Convert to HSV
+        hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
+        h, s, v = cv2.split(hsv)
+        
+        # Tăng saturation ở vùng màu bệnh
+        # Hue 0-18: Red/Brown (Rust severe, Cercospora)
+        # Hue 18-38: Yellow/Orange (Rust, Miner)
+        disease_mask = ((h >= 0) & (h <= 38)) | ((h >= 170) & (h <= 180))
+        
+        # Tăng saturation vừa phải (15%) để làm nổi bật
+        s = np.where(disease_mask, np.minimum(s * 1.15, 255), s).astype(np.uint8)
+        
+        # Tăng nhẹ value để làm sáng vùng bệnh (7%)
+        v = np.where(disease_mask, np.minimum(v * 1.07, 255), v).astype(np.uint8)
+        
+        # Merge back
+        hsv = cv2.merge([h, s, v])
+        rgb = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
+        
+        return rgb
+    except Exception as e:
+        print(f"[EnhanceColors] Failed: {e}")
+        return img_array
+
+
+def _gentle_clahe(img_array: np.ndarray) -> np.ndarray:
+    """
+    Gentle CLAHE - CLAHE nhẹ nhàng, không quá mạnh.
+    """
+    try:
+        import cv2
+        
+        # Convert to LAB
+        lab = cv2.cvtColor(img_array, cv2.COLOR_RGB2LAB)
+        l, a, b = cv2.split(lab)
+        
+        # CLAHE với clip limit thấp hơn (2.0 thay vì 3.5)
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        l = clahe.apply(l)
+        
+        # Merge back
+        lab = cv2.merge([l, a, b])
+        rgb = cv2.cvtColor(lab, cv2.COLOR_LAB2RGB)
+        
+        return rgb
+    except Exception as e:
+        print(f"[CLAHE] Failed: {e}")
+        return img_array
+
+
+def _moderate_clahe(img_array: np.ndarray) -> np.ndarray:
+    """
+    Moderate CLAHE - CLAHE vừa phải, cân bằng tốt.
+    """
+    try:
+        import cv2
+        
+        # Convert to LAB
+        lab = cv2.cvtColor(img_array, cv2.COLOR_RGB2LAB)
+        l, a, b = cv2.split(lab)
+        
+        # CLAHE với clip limit vừa phải (2.5)
+        clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
+        l = clahe.apply(l)
+        
+        # Tăng nhẹ A, B channels
+        a = np.clip(a * 1.05, 0, 255).astype(np.uint8)
+        b = np.clip(b * 1.05, 0, 255).astype(np.uint8)
+        
+        # Merge back
+        lab = cv2.merge([l, a, b])
+        rgb = cv2.cvtColor(lab, cv2.COLOR_LAB2RGB)
+        
+        return rgb
+    except Exception as e:
+        print(f"[CLAHE] Failed: {e}")
+        return img_array
+
+
+def _subtle_color_boost(img_array: np.ndarray) -> np.ndarray:
+    """
+    Subtle Color Boost - Tăng màu rất nhẹ, chỉ ở vùng bệnh.
+    """
+    try:
+        import cv2
+        
+        # Convert to HSV
+        hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
+        h, s, v = cv2.split(hsv)
+        
+        # Chỉ tăng saturation nhẹ ở vùng màu bệnh (hue 10-35)
+        disease_mask = (h >= 10) & (h <= 35)
+        
+        # Tăng rất nhẹ (10% thay vì 40%)
+        s = np.where(disease_mask, np.minimum(s * 1.10, 255), s).astype(np.uint8)
+        
+        # Merge back
+        hsv = cv2.merge([h, s, v])
+        rgb = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
+        
+        return rgb
+    except Exception as e:
+        print(f"[ColorBoost] Failed: {e}")
+        return img_array
+
+
+def _moderate_color_boost(img_array: np.ndarray) -> np.ndarray:
+    """
+    Moderate Color Boost - Tăng màu vừa phải ở vùng bệnh.
+    """
+    try:
+        import cv2
+        
+        # Convert to HSV
+        hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
+        h, s, v = cv2.split(hsv)
+        
+        # Tăng saturation ở vùng màu bệnh (hue 10-40)
+        disease_mask = (h >= 10) & (h <= 40)
+        
+        # Tăng vừa phải (18%)
+        s = np.where(disease_mask, np.minimum(s * 1.18, 255), s).astype(np.uint8)
+        
+        # Tăng nhẹ value để làm sáng vùng bệnh
+        v = np.where(disease_mask, np.minimum(v * 1.08, 255), v).astype(np.uint8)
+        
+        # Merge back
+        hsv = cv2.merge([h, s, v])
+        rgb = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
+        
+        return rgb
+    except Exception as e:
+        print(f"[ColorBoost] Failed: {e}")
+        return img_array
+
+
+def _calculate_brightness(image: Image.Image) -> float:
+    """Tính độ sáng trung bình của ảnh."""
+    try:
+        from PIL import ImageStat
+        stat = ImageStat.Stat(image)
+        return sum(stat.mean) / 3
+    except:
+        return 128
+
+
+def _enhance_disease_regions(img_array: np.ndarray) -> np.ndarray:
+    """
+    Tăng cường vùng bệnh - Làm nổi bật các vết bệnh.
+    Sử dụng selective enhancement dựa trên màu sắc.
+    """
+    try:
+        import cv2
+        
+        # Convert to HSV
+        hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
+        h, s, v = cv2.split(hsv)
+        
+        # Tăng saturation ở vùng màu bệnh (vàng, nâu, đỏ)
+        # Hue: 0-35 (red-yellow-brown range)
+        disease_mask = ((h >= 0) & (h <= 35)) | ((h >= 170) & (h <= 180))
+        
+        # Tăng saturation và value ở vùng bệnh
+        s = np.where(disease_mask, np.minimum(s * 1.4, 255), s).astype(np.uint8)
+        v = np.where(disease_mask, np.minimum(v * 1.2, 255), v).astype(np.uint8)
+        
+        # Merge back
+        hsv_enhanced = cv2.merge([h, s, v])
+        rgb_enhanced = cv2.cvtColor(hsv_enhanced, cv2.COLOR_HSV2RGB)
+        
+        return rgb_enhanced
+    except Exception as e:
+        print(f"[EnhanceDisease] Failed: {e}")
+        return img_array
+
+
+def _advanced_clahe_lab(img_array: np.ndarray) -> np.ndarray:
+    """
+    Advanced CLAHE trên LAB color space.
+    Áp dụng CLAHE riêng cho L channel và tăng cường A, B channels.
+    """
+    try:
+        import cv2
+        
+        # Convert to LAB
+        lab = cv2.cvtColor(img_array, cv2.COLOR_RGB2LAB)
+        l, a, b = cv2.split(lab)
+        
+        # CLAHE on L channel với clip limit cao hơn
+        clahe = cv2.createCLAHE(clipLimit=3.5, tileGridSize=(8, 8))
+        l = clahe.apply(l)
+        
+        # Tăng cường A và B channels (màu sắc)
+        a = cv2.normalize(a, None, 0, 255, cv2.NORM_MINMAX)
+        b = cv2.normalize(b, None, 0, 255, cv2.NORM_MINMAX)
+        
+        # Merge back
+        lab_enhanced = cv2.merge([l, a, b])
+        rgb_enhanced = cv2.cvtColor(lab_enhanced, cv2.COLOR_LAB2RGB)
+        
+        return rgb_enhanced
+    except Exception as e:
+        print(f"[CLAHE] Failed: {e}")
+        return img_array
+
+
+def _adaptive_gamma_correction(img_array: np.ndarray) -> np.ndarray:
+    """
+    Adaptive Gamma Correction - Tự động điều chỉnh gamma theo histogram.
+    """
+    try:
+        import cv2
+        
+        # Tính mean intensity
+        gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+        mean_intensity = np.mean(gray)
+        
+        # Tính gamma dựa trên mean intensity
+        if mean_intensity < 80:
+            gamma = 1.0 + (80 - mean_intensity) / 200  # Tối → tăng gamma
+        elif mean_intensity > 170:
+            gamma = 1.0 - (mean_intensity - 170) / 300  # Sáng → giảm gamma
+        else:
+            gamma = 1.0  # OK
+        
+        gamma = np.clip(gamma, 0.6, 1.6)
+        
+        if gamma != 1.0:
+            # Apply gamma correction
+            inv_gamma = 1.0 / gamma
+            table = np.array([((i / 255.0) ** inv_gamma) * 255 for i in range(256)]).astype(np.uint8)
+            img_array = cv2.LUT(img_array, table)
+            print(f"[Gamma] Applied gamma={round(gamma, 2)}")
+        
+        return img_array
+    except Exception as e:
+        print(f"[Gamma] Failed: {e}")
+        return img_array
+
+
+def _multi_channel_sharpen(img_array: np.ndarray) -> np.ndarray:
+    """
+    Multi-channel Sharpening - Tăng sắc nét riêng cho từng kênh màu.
+    Giúp làm nổi bật chi tiết vết bệnh tốt hơn.
+    """
+    try:
+        import cv2
+        
+        # Split channels
+        r, g, b = cv2.split(img_array)
+        
+        # Sharpen kernel
+        kernel = np.array([[-1, -1, -1],
+                          [-1,  9, -1],
+                          [-1, -1, -1]])
+        
+        # Apply sharpening to each channel
+        r_sharp = cv2.filter2D(r, -1, kernel)
+        g_sharp = cv2.filter2D(g, -1, kernel)
+        b_sharp = cv2.filter2D(b, -1, kernel)
+        
+        # Blend original and sharpened (70% sharp, 30% original)
+        r = cv2.addWeighted(r_sharp, 0.7, r, 0.3, 0)
+        g = cv2.addWeighted(g_sharp, 0.7, g, 0.3, 0)
+        b = cv2.addWeighted(b_sharp, 0.7, b, 0.3, 0)
+        
+        return cv2.merge([r, g, b])
+    except Exception as e:
+        print(f"[Sharpen] Failed: {e}")
+        return img_array
+
+
+def _boost_disease_colors(img_array: np.ndarray) -> np.ndarray:
+    """
+    Boost Disease Colors - Tăng cường màu bệnh (vàng, nâu, đỏ).
+    Sử dụng color transformation matrix.
+    """
+    try:
+        import cv2
+        
+        # Convert to float
+        img_float = img_array.astype(np.float32) / 255.0
+        r, g, b = cv2.split(img_float)
+        
+        # Boost yellow/brown (Rust, Miner)
+        # Vùng có R > G > B
+        yellow_mask = (r > g) & (g > b) & (r > 0.3)
+        r = np.where(yellow_mask, np.minimum(r * 1.25, 1.0), r)
+        g = np.where(yellow_mask, np.minimum(g * 1.1, 1.0), g)
+        b = np.where(yellow_mask, b * 0.85, b)
+        
+        # Boost red (severe Rust)
+        red_mask = (r > g * 1.4) & (r > b * 1.4) & (r > 0.4)
+        r = np.where(red_mask, np.minimum(r * 1.2, 1.0), r)
+        
+        # Boost brown (Phoma, Cercospora)
+        brown_mask = (r > 0.25) & (g > 0.15) & (b < 0.25) & (r > g) & (g > b)
+        r = np.where(brown_mask, np.minimum(r * 1.15, 1.0), r)
+        g = np.where(brown_mask, np.minimum(g * 1.1, 1.0), g)
+        
+        # Convert back
+        img_float = cv2.merge([r, g, b])
+        img_array = (img_float * 255).astype(np.uint8)
+        
+        return img_array
+    except Exception as e:
+        print(f"[BoostColors] Failed: {e}")
+        return img_array
+
+
+def _enhance_edges(img_array: np.ndarray) -> np.ndarray:
+    """
+    Edge Enhancement - Làm nổi bật viền vết bệnh.
+    Sử dụng Laplacian edge detection và blending.
+    """
+    try:
+        import cv2
+        
+        # Convert to grayscale for edge detection
+        gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+        
+        # Laplacian edge detection
+        laplacian = cv2.Laplacian(gray, cv2.CV_64F, ksize=3)
+        laplacian = np.uint8(np.absolute(laplacian))
+        
+        # Normalize
+        laplacian = cv2.normalize(laplacian, None, 0, 255, cv2.NORM_MINMAX)
+        
+        # Convert back to 3 channels
+        laplacian_3ch = cv2.cvtColor(laplacian, cv2.COLOR_GRAY2RGB)
+        
+        # Blend with original (add edges)
+        enhanced = cv2.addWeighted(img_array, 1.0, laplacian_3ch, 0.3, 0)
+        
+        return enhanced
+    except Exception as e:
+        print(f"[EnhanceEdges] Failed: {e}")
+        return img_array
+
+
+def _contrast_stretching(img_array: np.ndarray) -> np.ndarray:
+    """
+    Contrast Stretching - Kéo giãn độ tương phản.
+    Sử dụng percentile-based stretching để tránh outliers.
+    """
+    try:
+        import cv2
+        
+        # Calculate percentiles (2% and 98%)
+        p2 = np.percentile(img_array, 2)
+        p98 = np.percentile(img_array, 98)
+        
+        # Stretch contrast
+        img_stretched = np.clip((img_array - p2) * (255.0 / (p98 - p2)), 0, 255).astype(np.uint8)
+        
+        return img_stretched
+    except Exception as e:
+        print(f"[ContrastStretch] Failed: {e}")
+        return img_array
+
+
+def _run_yolo_prediction(image: Image.Image, img_size: int = 640, conf_threshold: float = 0.001) -> Dict[str, Any]:
     import time
-
     started = time.time()
+    
+    print(f"[YOLO] Starting prediction...")
+    print(f"[YOLO] Image size: {img_size}x{img_size}")
+    print(f"[YOLO] Confidence threshold: {conf_threshold}")
+    
     model = _load_yolo_model()
-    results = model.predict(source=image, imgsz=img_size, conf=conf_threshold, verbose=False)
+    print(f"[YOLO] Model loaded in {round(time.time() - started, 2)}s")
+    
+    # Prediction với settings tối ưu cho detection
+    predict_start = time.time()
+    
+    results = model.predict(
+        source=image, 
+        imgsz=img_size, 
+        conf=conf_threshold,  # Threshold rất thấp
+        verbose=False,
+        device='cpu',
+        half=False,
+        max_det=300,  # Tăng lên 300
+        augment=True,  # Augmentation
+        agnostic_nms=False,
+        iou=0.3,  # Giảm IoU xuống 0.3 để giữ nhiều detections hơn
+    )
+    
+    predict_time = round(time.time() - predict_start, 2)
+    print(f"[YOLO] Prediction completed in {predict_time}s")
+    
     processing_time = round(time.time() - started, 4)
 
     summary: Dict[str, int] = {}
     detections: List[Dict[str, Any]] = []
     primary_disease = None
     primary_confidence = 0.0
+    
+    all_confidences = []
 
     if not results:
+        print(f"[YOLO] No results returned")
         return {
-            'summary': summary,
-            'detections': detections,
-            'primaryDisease': primary_disease,
-            'primaryConfidence': primary_confidence,
+            'summary': summary, 
+            'detections': detections, 
+            'primaryDisease': 'unknown',
+            'primaryConfidence': 0.0, 
             'processingTime': processing_time,
+            'isValidCoffeeLeaf': False,
         }
 
     result = results[0]
     names = result.names if hasattr(result, 'names') else {}
     boxes = getattr(result, 'boxes', None)
 
-    if boxes is None:
+    if boxes is None or len(boxes) == 0:
+        print(f"[YOLO] No objects detected")
+        print(f"[YOLO] ⚠️ Model không detect được gì - Có thể:")
+        print(f"[YOLO]   1. Ảnh không phải lá cà phê")
+        print(f"[YOLO]   2. Ảnh quá mờ/tối/sáng")
+        print(f"[YOLO]   3. Model chưa được train với loại ảnh này")
         return {
-            'summary': summary,
-            'detections': detections,
-            'primaryDisease': primary_disease,
-            'primaryConfidence': primary_confidence,
+            'summary': summary, 
+            'detections': detections, 
+            'primaryDisease': 'not_coffee_leaf',
+            'primaryConfidence': 0.0, 
             'processingTime': processing_time,
+            'isValidCoffeeLeaf': False,
         }
 
+    print(f"[YOLO] Detected {len(boxes)} objects")
+    
+    # Tính weighted confidence cho từng bệnh
+    disease_confidence_sum: Dict[str, float] = {}
+    disease_count: Dict[str, int] = {}
+    disease_max_conf: Dict[str, float] = {}
+    
     for idx in range(len(boxes)):
         class_id = int(boxes.cls[idx].item())
         confidence = float(boxes.conf[idx].item())
         bbox = [int(x) for x in boxes.xyxy[idx].tolist()]
-
-        disease_name = names.get(class_id, str(class_id))
-        disease_name = str(disease_name).strip()
+        disease_name = str(names.get(class_id, str(class_id))).strip()
 
         summary[disease_name] = summary.get(disease_name, 0) + 1
-        detections.append({
-            'disease': disease_name,
-            'confidence': round(confidence, 4),
-            'bbox': bbox,
-        })
-
-        if confidence > primary_confidence:
-            primary_confidence = confidence
-            primary_disease = disease_name
+        detections.append({'disease': disease_name, 'confidence': round(confidence, 4), 'bbox': bbox})
+        
+        all_confidences.append(confidence)
+        
+        # Tính statistics cho từng bệnh
+        disease_confidence_sum[disease_name] = disease_confidence_sum.get(disease_name, 0.0) + confidence
+        disease_count[disease_name] = disease_count.get(disease_name, 0) + 1
+        disease_max_conf[disease_name] = max(disease_max_conf.get(disease_name, 0.0), confidence)
+    
+    # Chọn primary disease - Weighted scoring
+    if disease_confidence_sum:
+        # Score = (avg_confidence * 0.6) + (max_confidence * 0.3) + (count_weight * 0.1)
+        disease_scores = {}
+        max_count = max(disease_count.values())
+        
+        for disease in disease_confidence_sum:
+            avg_conf = disease_confidence_sum[disease] / disease_count[disease]
+            max_conf = disease_max_conf[disease]
+            count_weight = disease_count[disease] / max_count
+            
+            score = (avg_conf * 0.6) + (max_conf * 0.3) + (count_weight * 0.1)
+            disease_scores[disease] = score
+        
+        primary_disease = max(disease_scores, key=disease_scores.get)
+        # Primary confidence = average confidence của bệnh đó
+        primary_confidence = disease_confidence_sum[primary_disease] / disease_count[primary_disease]
+        
+        overall_confidence = sum(all_confidences) / len(all_confidences) if all_confidences else 0.0
+        
+        print(f"[YOLO] Primary: {primary_disease} (avg: {round(primary_confidence * 100, 1)}%, max: {round(disease_max_conf[primary_disease] * 100, 1)}%, count: {disease_count[primary_disease]})")
+        print(f"[YOLO] Overall confidence: {round(overall_confidence * 100, 1)}%")
+    
+    is_valid = primary_confidence >= 0.001  # Giảm xuống 0.001
+    
+    if not is_valid:
+        print(f"[YOLO] Confidence too low ({round(primary_confidence * 100, 1)}%)")
+    
+    print(f"[YOLO] Summary: {summary}")
+    print(f"[YOLO] Total processing time: {processing_time}s")
 
     return {
         'summary': summary,
         'detections': detections,
-        'primaryDisease': primary_disease,
-        'primaryConfidence': round(primary_confidence, 4),
+        'primaryDisease': primary_disease or 'unknown',
+        'primaryConfidence': primary_confidence,
         'processingTime': processing_time,
+        'isValidCoffeeLeaf': is_valid,
     }
 
 
 def _filter_existing_disease_ids(raw_ids: List[str]) -> List[str]:
-    """
-    Keep only disease IDs that really exist in Firestore diseases collection.
-    """
     filtered: List[str] = []
-
     for raw_id in raw_ids:
         disease_id = _resolve_disease_id(raw_id)
         if disease_id and disease_id not in filtered:
             filtered.append(disease_id)
-
     return filtered
 
 
 def _resolve_disease_id(raw_id: str) -> Optional[str]:
     if not raw_id:
         return None
-
     base = raw_id.strip()
-    candidates = [base, base.lower(), base.title(), base.upper()]
-
-    for candidate in candidates:
+    for candidate in [base, base.lower(), base.title(), base.upper()]:
         disease = diagnosis_repo.get_disease_by_id(candidate)
         if disease:
             return disease.get('id') or candidate
-
     return None

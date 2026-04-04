@@ -1,68 +1,37 @@
-import { useRouter } from "expo-router";
-import { useState } from "react";
-import { Alert } from "react-native";
-import { useAuth } from "@/context/AuthContext";
-import { globalHistoryData } from "../../profile/viewmodels/profileLoggedInVM";
-import { db } from "../../../../config/firebase";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+/**
+ * detail-screenVM.ts
+ *
+ * Nhận diagnosisId từ params (truyền từ resultScreen).
+ * Kết quả đã được lưu vào Firestore bởi backend khi predict.
+ * Không cần lưu lại — chỉ cần navigate về profile để xem lịch sử.
+ */
+import { useRouter, useLocalSearchParams } from "expo-router";
 
 export const useDetailScreenVM = () => {
-  const [isSaving, setIsSaving] = useState(false);
   const router = useRouter();
-  const { user } = useAuth();
+  const params = useLocalSearchParams<{
+    diagnosisId: string;
+    diseaseName: string;
+    treatment: string;
+    imageUrl: string;
+  }>();
 
-  const handleSaveHistory = async () => {
-    setIsSaving(true);
+  const diagnosisId = params.diagnosisId ?? "";
+  const diseaseName = params.diseaseName ?? "Không xác định";
+  const treatment = params.treatment ?? "";
+  const imageUrl = params.imageUrl ?? "";
 
-    try {
-      if (!user) {
-        router.push({
-          pathname: "/auth/login",
-        });
-        return;
-      }
-
-      const newId = Date.now().toString();
-      const dateStr = new Date().toLocaleDateString("vi-VN");
-
-      // Lưu lịch sử vào: users/{uid}/histories/{historyId}
-      await setDoc(
-        doc(db, "users", user.uid, "histories", newId),
-        {
-          id: newId,
-          title: "Bệnh gỉ sắt",
-          date: dateStr,
-          createdAt: serverTimestamp(),
-        },
-        { merge: true }
-      );
-
-      // Cập nhật local để UI phản hồi ngay (Firestore sẽ được load lại khi focus screen)
-      const newRecord = { id: newId, title: "Bệnh gỉ sắt", date: dateStr };
-      globalHistoryData = [newRecord, ...globalHistoryData];
-
-      Alert.alert("Thành công", "Đã lưu vào lịch sử chẩn đoán!", [
-        {
-          text: "OK",
-          onPress: () => router.push("/(tabs)/profile/loggedInScreen"),
-        },
-      ]);
-    } catch (e) {
-      console.error("[detail-screenVM] handleSaveHistory failed:", e);
-      router.push({
-        pathname: "/error",
-        params: {
-          title: "Lỗi lưu trữ",
-          message: "Không thể lưu vào Firebase Firestore.",
-        },
-      });
-    } finally {
-      setIsSaving(false);
-    }
+  /**
+   * Kết quả đã được backend lưu vào collection diagnoses khi predict.
+   * Chỉ cần navigate về profile để xem lịch sử.
+   */
+  const handleViewHistory = () => {
+    router.push("/(tabs)/profile/loggedInScreen");
   };
-  //POST /api/history
-  //GET /api/medicines/:diseaseId
-  //GET /api/history/:id
+
+  const handleRediagnose = () => {
+    router.push("/(tabs)/camera/cameraScreen");
+  };
 
   const goBack = () => {
     if (router.canGoBack()) {
@@ -73,8 +42,12 @@ export const useDetailScreenVM = () => {
   };
 
   return {
-    isSaving,
-    handleSaveHistory,
+    diagnosisId,
+    diseaseName,
+    treatment,
+    imageUrl,
+    handleViewHistory,
+    handleRediagnose,
     goBack,
   };
 };

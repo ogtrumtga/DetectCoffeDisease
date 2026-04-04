@@ -3,17 +3,31 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "../../../../config/firebase";
-import { collection, deleteDoc, doc, getDocs, orderBy, query } from "firebase/firestore";
-
-export let globalHistoryData = [
-  { id: "1", title: "C", date: "8 tháng 1" },
-  { id: "2", title: "không khô quả", date: "Ngày 1 tháng 12 năm 2025" },
-];
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  orderBy,
+  query,
+  where,
+  writeBatch,
+} from "firebase/firestore";
 
 export let globalUserData = {
-  name: "Đăng Vinh",
+  name: "Người dùng",
   bio: "Giới thiệu thân thế",
   avatar: null as string | null,
+};
+
+export type HistoryItem = {
+  id: string;
+  title: string;
+  date: string;
+  diseaseKey?: string;
+  severity?: string;
+  confidence?: number;
+  imageUrl?: string | null;
 };
 
 export const useProfileLoggedInVM = () => {
@@ -21,31 +35,49 @@ export const useProfileLoggedInVM = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("history");
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
-  const [historyData, setHistoryData] = useState(globalHistoryData);
+  const [historyData, setHistoryData] = useState<HistoryItem[]>([]);
   const [userData, setUserData] = useState(globalUserData);
 
+  /**
+   * Load lịch sử từ collection diagnoses (top-level).
+   * Query theo userId, sắp xếp mới nhất trước.
+   */
   const loadHistories = useCallback(async () => {
     if (!user) {
       setHistoryData([]);
-      globalHistoryData = [];
       return;
     }
 
     try {
-      const historiesRef = collection(db, "users", user.uid, "histories");
-      const q = query(historiesRef, orderBy("createdAt", "desc"));
+      const q = query(
+        collection(db, "diagnoses"),
+        where("userId", "==", user.uid),
+        orderBy("createdAt", "desc")
+      );
       const snapshot = await getDocs(q);
 
-      const newData = snapshot.docs.map((d) => {
+      const newData: HistoryItem[] = snapshot.docs.map((d) => {
         const data = d.data() as any;
+        const createdAt = data.createdAt?.toDate?.() ?? null;
+        const dateStr = createdAt
+          ? createdAt.toLocaleDateString("vi-VN", {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            })
+          : "Không rõ ngày";
+
         return {
           id: d.id,
-          title: String(data.title ?? ""),
-          date: String(data.date ?? ""),
+          title: String(data.diseaseNameVi ?? data.diseaseName ?? "Không xác định"),
+          date: dateStr,
+          diseaseKey: data.diseaseKey,
+          severity: data.severity,
+          confidence: data.confidence,
+          imageUrl: data.imageUrl ?? null,
         };
       });
 
-      globalHistoryData = newData;
       setHistoryData(newData);
     } catch (e) {
       console.error("[profileLoggedInVM] loadHistories failed:", e);
@@ -67,15 +99,15 @@ export const useProfileLoggedInVM = () => {
   );
 
   useEffect(() => {
-    // Vẫn giữ mock userData nếu chưa có UI chỉnh profile từ Firestore
     setUserData({ ...globalUserData });
   }, []);
 
+  /** Xóa một bản ghi chẩn đoán */
   const deleteItem = async (id: string) => {
     setIsDeleting(id);
     try {
       if (!user) return;
-      await deleteDoc(doc(db, "users", user.uid, "histories", id));
+      await deleteDoc(doc(db, "diagnoses", id));
       await loadHistories();
     } catch (e) {
       console.error("[profileLoggedInVM] deleteItem failed:", e);
@@ -91,13 +123,15 @@ export const useProfileLoggedInVM = () => {
     }
   };
 
+  /** Xóa toàn bộ lịch sử chẩn đoán của user */
   const deleteAllHistory = async () => {
     try {
       if (!user) return;
-      const historiesRef = collection(db, "users", user.uid, "histories");
-      const snapshot = await getDocs(historiesRef);
-      await Promise.all(snapshot.docs.map((d) => deleteDoc(d.ref)));
-      globalHistoryData = [];
+      const q = query(collection(db, "diagnoses"), where("userId", "==", user.uid));
+      const snapshot = await getDocs(q);
+      const batch = writeBatch(db);
+      snapshot.docs.forEach((d) => batch.delete(d.ref));
+      await batch.commit();
       setHistoryData([]);
     } catch (e) {
       console.error("[profileLoggedInVM] deleteAllHistory failed:", e);
@@ -114,15 +148,13 @@ export const useProfileLoggedInVM = () => {
   const toggleLikePost = (postId: string) => {
     setActivityData((prev) =>
       prev.map((post) => {
-        if (post.id === postId) {
-          return {
-            ...post,
-            isLiked: !post.isLiked,
-            likes: post.isLiked ? post.likes - 1 : post.likes + 1,
-          };
-        }
-        return post;
-      }),
+        if (post.id !== postId) return post;
+        return {
+          ...post,
+          isLiked: !post.isLiked,
+          likes: post.isLiked ? post.likes - 1 : post.likes + 1,
+        };
+      })
     );
   };
 
@@ -138,14 +170,7 @@ export const useProfileLoggedInVM = () => {
       isLiked: false,
     },
   ]);
-    //GET /api/auth/me
-    //GET /api/history  
-    //DELETE /api/history/:id
-    //DELETE /api/history 
-    //GET /api/posts
-    //GET /api/users/me/activity
-    //DELETE /api/posts/:id
-    //POST /api/posts/:id/like
+
   const navigateToDetail = (id: string) => {
     router.push({
       pathname: "/(tabs)/camera/detailCameraScreen",

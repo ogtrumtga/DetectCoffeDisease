@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Upload to Backend</title>
+</head>
+<body>
+    <h1>Test Upload Ảnh Lên Backend</h1>
+    <input type="file" id="fileInput" accept="image/*">
+    <button onclick="testUpload()">Upload Test</button>
+    <div id="result"></div>
+
+    <script>
+        const API_URL = 'http://192.168.36.1:8000';
+
+        async function testUpload() {
+            const fileInput = document.getElementById('fileInput');
+            const resultDiv = document.getElementById('result');
+            
+            if (!fileInput.files[0]) {
+                resultDiv.innerHTML = '<p style="color:red">Chọn ảnh trước!</p>';
+                return;
+            }
+
+            resultDiv.innerHTML = '<p>Đang upload...</p>';
+
+            try {
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+                formData.append('token', 'test-token'); // Fake token để test
+
+                console.log('Uploading to:', API_URL + '/api/diagnosis/upload-image');
+
+                const response = await fetch(API_URL + '/api/diagnosis/upload-image', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                console.log('Response status:', response.status);
+                const data = await response.json();
+                console.log('Response data:', data);
+
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <p style="color:green">✅ Upload thành công!</p>
+                        <p>ImageID: ${data.imageID}</p>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <p style="color:orange">⚠️ Backend trả về lỗi:</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                resultDiv.innerHTML = `
+                    <p style="color:red">❌ Không kết nối được backend!</p>
+                    <p>Error: ${error.message}</p>
+                    <p>Kiểm tra:</p>
+                    <ul>
+                        <li>Backend có đang chạy không?</li>
+                        <li>IP đúng chưa? (${API_URL})</li>
+                        <li>Firewall có block không?</li>
+                    </ul>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

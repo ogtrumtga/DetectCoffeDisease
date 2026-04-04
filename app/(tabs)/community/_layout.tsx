@@ -6,29 +6,16 @@ export default function CommunityLayout() {
     <NotificationProvider>
       <Stack
         screenOptions={{
+          headerShown: false,
           contentStyle: {
             backgroundColor: '#F8F9FA',
           },
         }}
       >
-        <Stack.Screen
-          name="communityIndex"
-          options={{ headerShown: false, title: "Cộng đồng" }}
-        />
-        <Stack.Screen
-          name="create-post"
-          options={{ headerShown: false, title: "Tạo bài viết" }}
-        />
-        <Stack.Screen
-          name="post-detail"
-          options={{ headerShown: false, title: "Chi tiết bài viết" }}
-        />
-        <Stack.Screen
-          name="notification-modal"
-          options={{
-            headerShown: false,
-          }}
-        />
+        <Stack.Screen name="communityIndex" options={{ title: "Cộng đồng" }} />
+        <Stack.Screen name="create-post" options={{ title: "Tạo bài viết" }} />
+        <Stack.Screen name="post-detail" options={{ title: "Chi tiết bài viết" }} />
+        <Stack.Screen name="notification-modal" />
       </Stack>
     </NotificationProvider>
   );

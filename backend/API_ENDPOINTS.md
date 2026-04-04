@@ -32,67 +32,89 @@ Authorization: Bearer <idToken>
 
 ---
 
-### 3. HISTORY (`/api/history`)
+### 3. DIAGNOSIS (`/api/diagnosis`)
+
+⚠️ **LƯU Ý**: Collection `history` đã được GỘP vào `diagnoses`. Tất cả API lịch sử giờ nằm trong `/api/diagnosis`.
+
+#### Upload & Predict
 
 | Method | Endpoint | Mô tả | Auth |
 |--------|----------|-------|------|
-| GET | `/api/history` | Danh sách lịch sử chẩn đoán | ✅ |
-| GET | `/api/history/{id}` | Chi tiết lịch sử | ✅ |
-| POST | `/api/history` | Tạo bản ghi lịch sử | ✅ |
-| DELETE | `/api/history/{id}` | Xóa một bản ghi | ✅ |
-| DELETE | `/api/history` | Xóa toàn bộ lịch sử | ✅ |
+| POST | `/api/diagnosis/upload-image` | Upload ảnh lên Cloudinary | ❌ |
+| POST | `/api/diagnosis/predict` | Chạy YOLO (best.pt) và lưu kết quả | ✅ |
 
-**Query params**:
+#### Lịch sử chẩn đoán (thay thế History API)
+
+| Method | Endpoint | Mô tả | Auth |
+|--------|----------|-------|------|
+| GET | `/api/diagnosis` | Danh sách lịch sử chẩn đoán | ✅ |
+| GET | `/api/diagnosis/{id}` | Chi tiết một chẩn đoán | ✅ |
+| DELETE | `/api/diagnosis/{id}` | Xóa một bản ghi | ✅ |
+| DELETE | `/api/diagnosis` | Xóa toàn bộ lịch sử | ✅ |
+
+#### Thông tin bệnh
+
+| Method | Endpoint | Mô tả | Auth |
+|--------|----------|-------|------|
+| GET | `/api/diagnosis/diseases/{id}` | Lấy thông tin bệnh theo id | ❌ |
+| GET | `/api/diagnosis/supported-diseases` | Danh sách bệnh hỗ trợ | ❌ |
+| GET | `/api/diagnosis/statistics` | Thống kê chẩn đoán | ✅ |
+
+**Query params (GET list)**:
 - `page` (default: 1)
 - `limit` (default: 10)
 
-**Request body (POST)**:
+**Request body (POST /api/diagnosis/upload-image)**:
 ```json
-{
-  "imageId": "img_001",
-  "predictions": {
-    "disease": "rust",
-    "confidence": 0.95
-  }
+FormData: {
+  "file": <image file>
 }
 ```
 
----
-
-### 4. DIAGNOSIS (`/api/diagnosis`)
-
-| Method | Endpoint | Mô tả | Auth |
-|--------|----------|-------|------|
-| POST | `/api/diagnosis/upload-image` | Upload ảnh và lưu metadata vào `images` | ❌ |
-| POST | `/api/diagnosis/predict` | Dự đoán bệnh từ `imageId` (YOLO `version1.pt`) | ✅ |
-| GET | `/api/diagnosis/diseases/{id}` | Lấy thông tin bệnh theo id | ❌ |
-| GET | `/api/diagnosis/{id}` | Lấy chi tiết kết quả theo `inferenceId` | ✅ |
+**Response (POST /api/diagnosis/upload-image)**:
+```json
+{
+  "imageID": "img_abc123",
+  "imageUrl": "https://cloudinary.com/...",
+  "message": "Image uploaded successfully"
+}
+```
 
 **Request body (POST /api/diagnosis/predict)**:
 ```json
 {
-  "imageId": "<id trong collection images>"
+  "imageId": "img_abc123",
+  "imgSize": 640,
+  "confThreshold": 0.25
 }
 ```
 
 **Response (POST /api/diagnosis/predict)**:
 ```json
 {
-  "inferenceId": "history_or_diagnosis_id",
-  "imageId": "abc123",
+  "diagnosisId": "diag_xyz789",
+  "imageId": "img_abc123",
+  "imageUrl": "https://cloudinary.com/...",
+  "primaryDiseaseName": "Bệnh gỉ sắt",
+  "diseaseKey": "rust",
+  "confidence": 92.5,
+  "severity": "high",
+  "color": "#FF5722",
+  "description": "Bệnh gỉ sắt là...",
+  "treatment": "Phun thuốc...",
   "summary": {
-    "Rust": 40,
-    "Phoma": 1
-  },
-  "diseaseID": ["Rust", "Phoma"],
-  "totalDetections": 41,
-  "imgSize": 640
+    "healthy": 10,
+    "rust": 45,
+    "cercospora": 2,
+    "miner": 0,
+    "phoma": 1
+  }
 }
 ```
 
 ---
 
-### 5. COMMUNITY (`/api/community`)
+### 4. COMMUNITY (`/api/community`)
 
 #### Posts
 
@@ -140,7 +162,7 @@ Authorization: Bearer <idToken>
 
 ---
 
-### 6. NOTIFICATIONS (`/api/notifications`)
+### 5. NOTIFICATIONS (`/api/notifications`)
 
 | Method | Endpoint | Mô tả | Auth |
 |--------|----------|-------|------|
@@ -187,29 +209,47 @@ Authorization: Bearer <idToken>
    POST /api/notifications/{id}/read
 ```
 
-### Workflow: Chẩn đoán bệnh và lưu lịch sử
+### Workflow: Chẩn đoán bệnh (Flow mới - Gộp history vào diagnoses)
 
 ```
 1. User chụp ảnh lá cà phê
-   (Frontend xử lý)
-
-2. Gửi ảnh lên model AI
-  POST /api/diagnosis/predict
-
-3. Nhận kết quả chẩn đoán
-   Response: { disease, confidence, treatment, ... }
-
-4. Lưu vào lịch sử
-   POST /api/history
-   Body: { imageId, predictions: {...} }
-
-5. Xem lại lịch sử
-   GET /api/history
-   → Danh sách các lần chẩn đoán
-
-6. Xem chi tiết một lần chẩn đoán
-   GET /api/history/{id}
+   (Frontend xử lý camera)
+   ↓
+2. Upload ảnh lên Cloudinary
+   POST /api/diagnosis/upload-image
+   Body: FormData { file: <image> }
+   → Nhận imageID
+   ↓
+3. Chạy YOLO predict
+   POST /api/diagnosis/predict
+   Body: { imageId, imgSize: 640, confThreshold: 0.25 }
+   → Backend tự động:
+     - Chạy YOLO (best.pt)
+     - Lưu kết quả vào collection diagnoses
+     - Trả về diagnosisId + kết quả đầy đủ
+   ↓
+4. Frontend hiển thị kết quả
+   Navigate sang resultScreen với dữ liệu thật
+   ↓
+5. User xem lịch sử
+   GET /api/diagnosis?page=1&limit=10
+   → Danh sách các lần chẩn đoán (từ collection diagnoses)
+   ↓
+6. User xem chi tiết
+   GET /api/diagnosis/{diagnosisId}
+   → Chi tiết đầy đủ một lần chẩn đoán
+   ↓
+7. User xóa một bản ghi
+   DELETE /api/diagnosis/{diagnosisId}
+   ↓
+8. User xóa toàn bộ lịch sử
+   DELETE /api/diagnosis
 ```
+
+**Lưu ý**: 
+- ❌ Không còn collection `history` riêng
+- ✅ Tất cả lịch sử nằm trong collection `diagnoses`
+- ✅ Backend tự động lưu khi predict, không cần POST thêm
 
 ---
 

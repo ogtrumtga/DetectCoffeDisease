@@ -9,7 +9,6 @@ from fastapi.openapi.utils import get_openapi
 from backend.api import (
     auth_api,
     user_api,
-    history_api,
     diagnosis_api,
     community_api,
     feedbacks_api,
@@ -61,7 +60,6 @@ app.add_middleware(
 # Include routers
 app.include_router(auth_api.router)
 app.include_router(user_api.router)
-app.include_router(history_api.router)
 app.include_router(diagnosis_api.router)
 app.include_router(community_api.router)
 app.include_router(feedbacks_api.router)

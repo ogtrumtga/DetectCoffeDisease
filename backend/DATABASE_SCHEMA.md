@@ -2,7 +2,7 @@
 
 ## 🎯 TỔNG QUAN HỆ THỐNG
 
-Hệ thống sử dụng 7 collections chính với các mối quan hệ sau:
+Hệ thống sử dụng 9 collections chính:
 
 ```
 users (1) ──────┬─────── (n) posts
@@ -11,7 +11,7 @@ users (1) ──────┬─────── (n) posts
                 │
                 ├─────── (n) likes
                 │
-                ├─────── (n) history
+                ├─────── (n) diagnoses  ← GỘP CẢ LỊCH SỬ
                 │
                 └─────── (n) notifications
 
@@ -19,7 +19,12 @@ posts (1) ──────┬─────── (n) comments
                 │
                 └─────── (n) likes
 
-weather_cache (độc lập, không có quan hệ)
+diagnoses (n) ──────── (1) diseases
+
+images (độc lập, metadata ảnh từ Cloudinary)
+feedbacks (độc lập, feedback chẩn đoán)
+treatments (độc lập, hướng điều trị)
+weather_cache (độc lập, cache thời tiết)
 ```
 
 ---
@@ -45,7 +50,83 @@ weather_cache (độc lập, không có quan hệ)
 
 ---
 
-### 2. COLLECTION: `posts`
+### 2. COLLECTION: `diagnoses` ⭐ (GỘP CẢ LỊCH SỬ)
+**Mục đích**: Lưu kết quả chẩn đoán bệnh cà phê (bao gồm cả metadata lịch sử)
+
+**Document ID**: Auto-generated
+
+**Fields**:
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| userId | string | ✅ | UID người dùng (FK → users) |
+| diseaseKey | string | ✅ | Key bệnh (rust, cercospora, healthy, ...) |
+| diseaseName | string | ✅ | Tên bệnh tiếng Anh |
+| diseaseNameVi | string | ✅ | Tên bệnh tiếng Việt |
+| confidence | number | ✅ | Độ tin cậy (0-1) |
+| severity | string | ✅ | Mức độ (none/medium/high) |
+| color | string | ✅ | Màu hiển thị (#HEX) |
+| description | string | ✅ | Mô tả bệnh |
+| treatment | string | ✅ | Hướng dẫn điều trị |
+| imageUrl | string | ❌ | URL ảnh đã chẩn đoán |
+| imageId | string | ❌ | ID trong collection images |
+| summary | object | ❌ | Tóm tắt phát hiện {'Rust': 15, 'Phoma': 2} |
+| detections | array | ❌ | Chi tiết các vùng phát hiện |
+| diseaseIDs | array | ❌ | Danh sách disease IDs phát hiện |
+| modelVersion | string | ✅ | Phiên bản model (best.pt) |
+| processingTime | number | ✅ | Thời gian xử lý (giây) |
+| createdAt | timestamp | ✅ | Thời gian chẩn đoán |
+
+**Indexes cần tạo**:
+- `userId (ASC) + createdAt (DESC)` - Query lịch sử của user
+
+**Quan hệ**:
+- `userId` → `users/{userId}`
+- `diseaseKey` → `diseases/{diseaseKey}` (optional)
+- `imageId` → `images/{imageId}` (optional)
+
+**Lưu ý**: Collection này GỘP cả lịch sử (history) — không còn collection history riêng.
+
+---
+
+### 3. COLLECTION: `diseases`
+**Mục đích**: Danh sách bệnh cà phê được model hỗ trợ
+
+**Document ID**: `{diseaseKey}` (rust, miner, phoma, healthy)
+
+**Fields**:
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| name | string | ✅ | Tên bệnh |
+| description | string | ✅ | Mô tả bệnh |
+| id | string | ✅ | ID của bệnh (trùng với document ID) |
+
+**Indexes**: Không cần (query theo document ID)
+
+**Lưu ý**: 
+- Tất cả field names viết thường (name, description, id)
+- Không còn lưu treatment, severity, color trong collection này
+- Thông tin điều trị được tách ra collection treatments riêng
+
+---
+
+### 4. COLLECTION: `images`
+**Mục đích**: Metadata ảnh từ Cloudinary
+
+**Document ID**: Auto-generated
+
+**Fields**:
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| userId | string | ✅ | UID người upload |
+| publicID | string | ✅ | Public ID trên Cloudinary |
+| imageURL | string | ✅ | URL ảnh |
+| createdAt | timestamp | ✅ | Thời gian upload |
+
+**Indexes**: Không cần
+
+---
+
+### 5. COLLECTION: `posts`
 **Mục đích**: Lưu bài đăng cộng đồng
 
 **Document ID**: Auto-generated
@@ -67,14 +148,9 @@ weather_cache (độc lập, không có quan hệ)
 - `authorId (ASC) + createdAt (DESC)` - Query bài đăng của user
 - `createdAt (DESC)` - Query feed mới nhất (single-field, tự động)
 
-**Quan hệ**:
-- `authorId` → `users/{userId}`
-- Có nhiều `comments` (1-n)
-- Có nhiều `likes` (1-n)
-
 ---
 
-### 3. COLLECTION: `comments`
+### 6. COLLECTION: `comments`
 **Mục đích**: Lưu bình luận bài đăng
 
 **Document ID**: Auto-generated
@@ -90,13 +166,9 @@ weather_cache (độc lập, không có quan hệ)
 **Indexes cần tạo**:
 - `postId (ASC) + createdAt (ASC)` - Query comments của bài đăng
 
-**Quan hệ**:
-- `postId` → `posts/{postId}`
-- `authorId` → `users/{userId}`
-
 ---
 
-### 4. COLLECTION: `likes`
+### 7. COLLECTION: `likes`
 **Mục đích**: Lưu lượt thích bài đăng
 
 **Document ID**: `{userId}_{postId}` (composite key)
@@ -111,39 +183,9 @@ weather_cache (độc lập, không có quan hệ)
 **Indexes cần tạo**:
 - `postId (ASC) + userId (ASC)` - Query likes của bài đăng
 
-**Quan hệ**:
-- `postId` → `posts/{postId}`
-- `userId` → `users/{userId}`
-
-**Lưu ý**: Document ID là composite key để đảm bảo 1 user chỉ like 1 lần
-
 ---
 
-### 5. COLLECTION: `history`
-**Mục đích**: Lưu lịch sử chẩn đoán bệnh cà phê
-
-**Document ID**: Auto-generated
-
-**Fields**:
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| userId | string | ✅ | UID người dùng (FK → users) |
-| disease | string | ✅ | Tên bệnh được chẩn đoán |
-| confidence | number | ✅ | Độ tin cậy (0-1) |
-| description | string | ✅ | Mô tả bệnh |
-| treatment | string | ✅ | Hướng dẫn điều trị |
-| imageUrl | string | ✅ | URL ảnh đã chẩn đoán |
-| createdAt | timestamp | ✅ | Thời gian chẩn đoán |
-
-**Indexes cần tạo**:
-- `userId (ASC) + createdAt (DESC)` - Query lịch sử của user
-
-**Quan hệ**:
-- `userId` → `users/{userId}`
-
----
-
-### 6. COLLECTION: `notifications`
+### 8. COLLECTION: `notifications`
 **Mục đích**: Lưu thông báo cho người dùng
 
 **Document ID**: Auto-generated
@@ -152,22 +194,65 @@ weather_cache (độc lập, không có quan hệ)
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | userId | string | ✅ | UID người nhận (FK → users) |
-| type | string | ✅ | Loại thông báo (like/comment/system) |
+| type | string | ✅ | Loại thông báo (like/comment/diagnosis_alert/system) |
 | title | string | ✅ | Tiêu đề thông báo |
 | message | string | ✅ | Nội dung thông báo |
-| data | object | ❌ | Dữ liệu bổ sung (postId, etc.) |
+| data | object | ❌ | Dữ liệu bổ sung (postId, diagnosisId, etc.) |
 | isRead | boolean | ✅ | Đã đọc chưa |
 | createdAt | timestamp | ✅ | Thời gian tạo |
 
 **Indexes cần tạo**:
 - `userId (ASC) + isRead (ASC) + createdAt (DESC)` - Query thông báo chưa đọc
 
-**Quan hệ**:
-- `userId` → `users/{userId}`
+---
+
+### 9. COLLECTION: `feedbacks`
+**Mục đích**: Feedback chẩn đoán
+
+**Document ID**: Auto-generated
+
+**Fields**:
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| userId | string | ✅ | UID người feedback |
+| diagnoses_id | string | ✅ | ID chẩn đoán |
+| rate | number | ✅ | Đánh giá (1-5) |
+| comment | string | ✅ | Nội dung feedback |
+| createdAt | timestamp | ✅ | Thời gian tạo |
 
 ---
 
-### 7. COLLECTION: `weather_cache`
+### 10. COLLECTION: `treatments`
+**Mục đích**: Hướng điều trị theo bệnh (liên kết với diseases)
+
+**Document ID**: Auto-generated
+
+**Fields**:
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| diseaseId | string | ✅ | ID bệnh (FK → diseases/{diseaseId}) |
+| steps | array | ✅ | Các bước điều trị (array of strings) |
+| medicine | array | ✅ | Danh sách thuốc (array of strings) |
+| severity | string | ✅ | Mức độ nghiêm trọng (none/medium/high) |
+| color | string | ✅ | Màu hiển thị (#HEX) |
+| createdBy | string | ✅ | UID người tạo |
+| createdAt | timestamp | ✅ | Thời gian tạo |
+| updatedAt | timestamp | ✅ | Thời gian cập nhật |
+
+**Indexes cần tạo**:
+- `diseaseId (ASC)` - Query treatment theo bệnh
+
+**Quan hệ**:
+- `diseaseId` → `diseases/{diseaseId}`
+
+**Lưu ý**:
+- Mỗi disease có thể có nhiều treatments (1-n relationship)
+- Treatment được tách riêng khỏi diseases để dễ quản lý và cập nhật
+- Severity và color được lưu trong treatments thay vì diseases
+
+---
+
+### 11. COLLECTION: `weather_cache`
 **Mục đích**: Cache dữ liệu thời tiết
 
 **Document ID**: `{locationKey}` (e.g., "hanoi", "daklak")
@@ -179,10 +264,6 @@ weather_cache (độc lập, không có quan hệ)
 | weatherData | object | ✅ | Dữ liệu thời tiết từ API |
 | cachedAt | timestamp | ✅ | Thời gian cache |
 
-**Indexes**: Không cần (query theo document ID)
-
-**Quan hệ**: Không có (collection độc lập)
-
 ---
 
 ## 🔗 MỐI QUAN HỆ GIỮA CÁC COLLECTIONS
@@ -190,43 +271,14 @@ weather_cache (độc lập, không có quan hệ)
 ### Quan hệ 1-n (One-to-Many)
 
 1. **users → posts**: 1 user có nhiều bài đăng
-   - Foreign Key: `posts.authorId` → `users.{userId}`
-
 2. **users → comments**: 1 user có nhiều bình luận
-   - Foreign Key: `comments.authorId` → `users.{userId}`
-
 3. **users → likes**: 1 user có nhiều lượt thích
-   - Foreign Key: `likes.userId` → `users.{userId}`
-
-4. **users → history**: 1 user có nhiều lịch sử chẩn đoán
-   - Foreign Key: `history.userId` → `users.{userId}`
-
+4. **users → diagnoses**: 1 user có nhiều chẩn đoán ⭐
 5. **users → notifications**: 1 user có nhiều thông báo
-   - Foreign Key: `notifications.userId` → `users.{userId}`
-
 6. **posts → comments**: 1 bài đăng có nhiều bình luận
-   - Foreign Key: `comments.postId` → `posts.{postId}`
-
 7. **posts → likes**: 1 bài đăng có nhiều lượt thích
-   - Foreign Key: `likes.postId` → `posts.{postId}`
-
-### Denormalization (Tối ưu hiệu suất)
-
-Để tránh query nhiều lần, một số dữ liệu được denormalize:
-
-- `posts.likesCount`: Số lượt thích (thay vì count collection likes)
-- `posts.commentsCount`: Số bình luận (thay vì count collection comments)
-
-**Cách cập nhật**:
-```python
-# Khi thêm like
-firebase_like_repository.add_like(post_id, user_id)
-firebase_post_repository.increment_likes_count(post_id, 1)
-
-# Khi xóa like
-firebase_like_repository.remove_like(post_id, user_id)
-firebase_post_repository.increment_likes_count(post_id, -1)
-```
+8. **diseases → diagnoses**: 1 bệnh có nhiều chẩn đoán
+9. **diseases → treatments**: 1 bệnh có nhiều treatments (1-n)
 
 ---
 
@@ -237,7 +289,7 @@ Các composite indexes cần tạo (xem file `firestore.indexes.json`):
 1. **posts**: `authorId + createdAt`
 2. **comments**: `postId + createdAt`
 3. **likes**: `postId + userId`
-4. **history**: `userId + createdAt`
+4. **diagnoses**: `userId + createdAt` ⭐
 5. **notifications**: `userId + isRead + createdAt`
 
 ---
@@ -251,6 +303,25 @@ Xem file `backend/firestore.rules` để biết chi tiết security rules.
 - `posts`: Public read, authenticated create, owner update/delete
 - `comments`: Public read, authenticated create, owner delete
 - `likes`: Public read, authenticated write
-- `history`: Owner read/delete only, backend create
+- `diagnoses`: Owner read/delete, backend create ⭐
+- `diseases`: Public read, backend write
+- `images`: Owner read, backend write
 - `notifications`: Owner read/update/delete, backend create
-- `weather_cache`: Public read, backend write only
+- `feedbacks`: Authenticated write, backend read
+- `treatments`: Public read, backend write
+- `weather_cache`: Public read, backend write
+
+---
+
+## ⚠️ THAY ĐỔI QUAN TRỌNG
+
+### ❌ Collection `history` đã bị XÓA
+Collection `history` đã được GỘP vào `diagnoses`. Tất cả metadata lịch sử giờ nằm trong `diagnoses`.
+
+### ✅ Collection `diagnoses` mới
+- Chứa đầy đủ kết quả chẩn đoán + metadata lịch sử
+- Không còn cần query 2 collections riêng
+- Đơn giản hóa API và data model
+
+### 🔄 Migration
+Chạy script `backend/scripts/reset_firestore_diagnoses.py` để reset Firestore.

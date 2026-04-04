@@ -3,21 +3,21 @@ import React from "react";
 import {
   ActivityIndicator,
   Image,
-  SafeAreaView,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeArea } from "@/components/SafeArea";
 
 import { styles } from "../styles/confirm-screen-style";
 import { useConfirmScreenVM } from "../viewmodels/confirm-screenVM";
 
 export default function ConfirmScreen() {
-  const { imageUri, loading, countdown, startAnalysis, cancelAnalysis } =
+  const { imageUri, loading, statusText, countdown, startAnalysis, cancelAnalysis } =
     useConfirmScreenVM();
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeArea style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>XÁC NHẬN ẢNH</Text>
       </View>
@@ -36,11 +36,8 @@ export default function ConfirmScreen() {
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#2A9D8F" />
-            <Text style={styles.loadingText}>AI đang phân tích...</Text>
-            {/* Lỗi loadingSubtext sẽ biến mất sau khi bạn cập nhật file style ở bước 2 */}
-            <Text style={styles.loadingSubtext}>
-              Vui lòng đợi trong giây lát
-            </Text>
+            <Text style={styles.loadingText}>{statusText}</Text>
+            <Text style={styles.loadingSubtext}>Vui lòng đợi trong giây lát</Text>
           </View>
         ) : (
           <>
@@ -69,6 +66,6 @@ export default function ConfirmScreen() {
           </>
         )}
       </View>
-    </SafeAreaView>
+    </SafeArea>
   );
 }

@@ -12,7 +12,6 @@ from . import firebase_post_repository
 from . import firebase_comment_repository
 from . import firebase_like_repository
 from . import firebase_diagnosis_repository
-from . import firebase_history_repository
 from . import firebase_notification_repository
 from . import firebase_feedback_repository
 from . import firebase_treatment_repository
@@ -27,7 +26,6 @@ __all__ = [
     'firebase_comment_repository',
     'firebase_like_repository',
     'firebase_diagnosis_repository',
-    'firebase_history_repository',
     'firebase_notification_repository',
     'firebase_feedback_repository',
     'firebase_treatment_repository',

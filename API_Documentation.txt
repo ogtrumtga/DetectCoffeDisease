@@ -420,94 +420,129 @@
 
 
 ================================================================================
-5. HISTORY API - Quản lý Lịch sử Chẩn đoán
+5. DIAGNOSIS API - Chẩn đoán bệnh & Lịch sử (ĐÃ GỘP HISTORY VÀO ĐÂY)
 ================================================================================
 
+⚠️ LƯU Ý: Collection history đã được GỘP vào diagnoses. Tất cả API lịch sử giờ 
+nằm trong /api/diagnosis.
+
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│ API: Lấy danh sách lịch sử                                                 │
+│ API: Lấy danh sách lịch sử (THAY THẾ GET /api/history)                     │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│ Endpoint:     GET /api/history                                               │
-│ Tên hàm:      list_user_histories()                                          │
+│ Endpoint:     GET /api/diagnosis                                             │
+│ Tên hàm:      list_user_diagnoses()                                          │
 │ Công dụng:    Lấy danh sách lịch sử chẩn đoán của user (có phân trang)     │
 │ Header:       Authorization: Bearer {access_token}                           │
-│ Đầu vào:      Query params: ?page=1&limit=20                                │
+│ Đầu vào:      Query params: ?page=1&limit=10                                │
 │ Đầu ra:       {                                                              │
-│                 "histories": [                                               │
+│                 "success": true,                                             │
+│                 "data": [                                                    │
 │                   {                                                          │
-│                     "id": "string",                                          │
-│                     "disease": "string",                                     │
+│                     "diagnosisId": "string",                                 │
+│                     "diseaseNameVi": "string",                               │
 │                     "confidence": "number",                                  │
-│                     "image_url": "string",                                   │
-│                     "created_at": "timestamp"                                │
+│                     "severity": "string",                                    │
+│                     "imageUrl": "string",                                    │
+│                     "createdAt": "timestamp"                                 │
 │                   }                                                          │
 │                 ],                                                           │
-│                 "total": "number",                                           │
-│                 "page": "number"                                             │
+│                 "page": 1,                                                   │
+│                 "limit": 10                                                  │
 │               }                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘
 
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│ API: Lấy chi tiết lịch sử                                                  │
+│ API: Lấy chi tiết chẩn đoán (THAY THẾ GET /api/history/{id})               │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│ Endpoint:     GET /api/history/{id}                                          │
-│ Tên hàm:      get_history_detail()                                           │
-│ Công dụng:    Lấy chi tiết một bản ghi lịch sử chẩn đoán                   │
+│ Endpoint:     GET /api/diagnosis/{id}                                        │
+│ Tên hàm:      get_diagnosis_detail()                                         │
+│ Công dụng:    Lấy chi tiết đầy đủ một bản ghi chẩn đoán                    │
 │ Header:       Authorization: Bearer {access_token}                           │
 │ Đầu vào:      Path param: {id}                                               │
 │ Đầu ra:       {                                                              │
-│                 "id": "string",                                              │
-│                 "disease": "string",                                         │
-│                 "confidence": "number",                                      │
-│                 "description": "string",                                     │
-│                 "treatment": "string",                                       │
-│                 "image_url": "string",                                       │
-│                 "created_at": "timestamp"                                    │
+│                 "success": true,                                             │
+│                 "data": {                                                    │
+│                   "diagnosisId": "string",                                   │
+│                   "diseaseKey": "string",                                    │
+│                   "diseaseNameVi": "string",                                 │
+│                   "confidence": "number",                                    │
+│                   "severity": "string",                                      │
+│                   "description": "string",                                   │
+│                   "treatment": "string",                                     │
+│                   "imageUrl": "string",                                      │
+│                   "summary": { ... },                                        │
+│                   "createdAt": "timestamp"                                   │
+│                 }                                                            │
 │               }                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘
 
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│ API: Tạo bản ghi lịch sử                                                   │
+│ API: Upload ảnh lên Cloudinary                                              │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│ Endpoint:     POST /api/history                                              │
-│ Tên hàm:      create_history_entry()                                         │
-│ Công dụng:    Tạo mới bản ghi lịch sử chẩn đoán sau khi model trả kết quả │
+│ Endpoint:     POST /api/diagnosis/upload-image                               │
+│ Tên hàm:      upload_image()                                                 │
+│ Công dụng:    Upload ảnh lên Cloudinary và lưu metadata                     │
+│ Header:       (không cần auth)                                               │
+│               Content-Type: multipart/form-data                              │
+│ Đầu vào:      FormData { file: <image> }                                    │
+│ Đầu ra:       {                                                              │
+│                 "imageID": "string",                                         │
+│                 "imageUrl": "string",                                        │
+│                 "message": "Image uploaded successfully"                     │
+│               }                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ API: Chạy YOLO predict (TỰ ĐỘNG LƯU LỊCH SỬ)                               │
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Endpoint:     POST /api/diagnosis/predict                                    │
+│ Tên hàm:      predict_disease()                                              │
+│ Công dụng:    Chạy YOLO (best.pt) và TỰ ĐỘNG LƯU vào diagnoses             │
 │ Header:       Authorization: Bearer {access_token}                           │
 │               Content-Type: application/json                                 │
 │ Đầu vào:      {                                                              │
-│                 "diagnosis_id": "string",                                    │
-│                 "disease": "string",                                         │
-│                 "confidence": "number",                                      │
-│                 "image_url": "string"                                        │
+│                 "imageId": "string",                                         │
+│                 "imgSize": 640,                                              │
+│                 "confThreshold": 0.25                                        │
 │               }                                                              │
 │ Đầu ra:       {                                                              │
-│                 "message": "History entry created",                          │
-│                 "history_id": "string"                                       │
+│                 "diagnosisId": "string",                                     │
+│                 "imageId": "string",                                         │
+│                 "imageUrl": "string",                                        │
+│                 "primaryDiseaseName": "string",                              │
+│                 "diseaseKey": "string",                                      │
+│                 "confidence": "number",                                      │
+│                 "severity": "string",                                        │
+│                 "color": "string",                                           │
+│                 "description": "string",                                     │
+│                 "treatment": "string",                                       │
+│                 "summary": { healthy: 10, rust: 45, ... }                   │
 │               }                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘
 
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│ API: Xóa một bản ghi lịch sử                                               │
+│ API: Xóa một bản ghi (THAY THẾ DELETE /api/history/{id})                   │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│ Endpoint:     DELETE /api/history/{id}                                       │
-│ Tên hàm:      delete_history_entry()                                         │
-│ Công dụng:    Xóa một bản ghi lịch sử chẩn đoán theo id                    │
+│ Endpoint:     DELETE /api/diagnosis/{id}                                     │
+│ Tên hàm:      delete_diagnosis()                                             │
+│ Công dụng:    Xóa một bản ghi chẩn đoán theo id                            │
 │ Header:       Authorization: Bearer {access_token}                           │
 │ Đầu vào:      Path param: {id}                                               │
 │ Đầu ra:       {                                                              │
-│                 "message": "History entry deleted"                           │
+│                 "message": "Diagnosis deleted successfully"                  │
 │               }                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘
 
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│ API: Xóa toàn bộ lịch sử                                                   │
+│ API: Xóa toàn bộ lịch sử (THAY THẾ DELETE /api/history)                    │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│ Endpoint:     DELETE /api/history                                            │
-│ Tên hàm:      clear_all_histories()                                          │
+│ Endpoint:     DELETE /api/diagnosis                                          │
+│ Tên hàm:      delete_all_diagnoses()                                         │
 │ Công dụng:    Xóa toàn bộ lịch sử chẩn đoán của user                       │
 │ Header:       Authorization: Bearer {access_token}                           │
 │ Đầu vào:      {}                                                             │
 │ Đầu ra:       {                                                              │
-│                 "message": "All histories cleared",                          │
+│                 "message": "All diagnoses deleted successfully",                          │
 │                 "deleted_count": "number"                                    │
 │               }                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘
@@ -677,8 +712,7 @@ Tổng số API: 37 endpoints
 - Auth API: 5 endpoints
 - User/Profile API: 5 endpoints
 - Community API: 8 endpoints
-- Diagnosis API: 4 endpoints
-- History API: 5 endpoints
+- Diagnosis API: 9 endpoints (bao gồm cả lịch sử - đã gộp History API vào đây)
 - Notification API: 3 endpoints
 - Weather API: 4 endpoints
 

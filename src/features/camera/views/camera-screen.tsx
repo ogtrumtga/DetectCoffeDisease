@@ -67,12 +67,13 @@ export default function CameraScreen() {
 
       <View style={styles.cameraContainer}>
         {!isPreview ? (
-          <CameraView
-            ref={cameraRef}
-            style={styles.camera}
-            facing={facing}
-            mode="picture"
-          >
+          <>
+            <CameraView
+              ref={cameraRef}
+              style={styles.camera}
+              facing={facing}
+              mode="picture"
+            />
             <View style={styles.overlay}>
               <View style={styles.viewfinder}>
                 <View style={[styles.corner, styles.topLeft]} />
@@ -84,7 +85,7 @@ export default function CameraScreen() {
                 Căn chỉnh lá cây vào giữa khung hình
               </Text>
             </View>
-          </CameraView>
+          </>
         ) : (
           <Image source={{ uri: photo! }} style={styles.camera} />
         )}

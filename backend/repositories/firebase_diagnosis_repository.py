@@ -1,8 +1,9 @@
 """
 Firebase Diagnosis repository.
 
-Làm việc với collection diagnoses (kết quả chẩn đoán chi tiết).
 Collection: diagnoses
+Mỗi document lưu đầy đủ kết quả chẩn đoán + metadata lịch sử.
+Không còn collection history riêng.
 """
 from backend.config import db
 from typing import Optional, Dict, Any, List
@@ -38,9 +39,8 @@ def get_disease_by_id(disease_id: str) -> Optional[Dict[str, Any]]:
 
 
 def query_diagnoses_by_user(user_id: str, limit: int = 20, offset: int = 0) -> List[Dict[str, Any]]:
-    """Query danh sách chẩn đoán theo user."""
+    """Query danh sách chẩn đoán theo user, sắp xếp mới nhất trước."""
     try:
-        # Avoid composite index requirement by filtering in Python.
         docs = db.collection('diagnoses').stream()
         diagnoses = []
         for doc in docs:
@@ -59,33 +59,34 @@ def query_diagnoses_by_user(user_id: str, limit: int = 20, offset: int = 0) -> L
 
 def insert_diagnosis(user_id: str, diagnosis_data: Dict[str, Any]) -> Optional[str]:
     """
-    Thêm kết quả chẩn đoán mới.
-    
-    diagnosis_data phải có:
-    - diseaseKey: str
-    - diseaseName: str
-    - diseaseNameVi: str
-    - confidence: float
-    - description: str
-    - treatment: str
-    - severity: str
-    - imageUrl: str
-    - modelVersion: str (optional)
-    - processingTime: float (optional)
+    Thêm kết quả chẩn đoán mới vào collection diagnoses.
+
+    Fields bắt buộc trong diagnosis_data:
+    - diseaseKey: str          — key bệnh (rust, cercospora, ...)
+    - diseaseName: str         — tên tiếng Anh
+    - diseaseNameVi: str       — tên tiếng Việt
+    - confidence: float        — độ tin cậy (0-1)
+    - description: str         — mô tả bệnh
+    - treatment: str           — hướng điều trị
+    - severity: str            — mức độ (none/medium/high)
+    - imageUrl: str            — URL ảnh đã chẩn đoán
+    - imageId: str (optional)  — ID trong collection images
+    - summary: dict (optional) — {'Rust': 3, 'Phoma': 1}
+    - detections: list (opt.)  — danh sách detection boxes
+    - modelVersion: str        — phiên bản model
+    - processingTime: float    — thời gian xử lý (giây)
     """
     try:
+        now = datetime.utcnow()
         diagnosis_data['userId'] = user_id
-        diagnosis_data['createdAt'] = datetime.utcnow()
-        
-        # Set defaults
-        if 'modelVersion' not in diagnosis_data:
-            diagnosis_data['modelVersion'] = 'v1.0'
-        if 'processingTime' not in diagnosis_data:
-            diagnosis_data['processingTime'] = 0.0
-        
+        diagnosis_data['createdAt'] = now
+        diagnosis_data.setdefault('modelVersion', 'best.pt')
+        diagnosis_data.setdefault('processingTime', 0.0)
+        diagnosis_data.setdefault('summary', {})
+        diagnosis_data.setdefault('detections', [])
+
         doc_ref = db.collection('diagnoses').document()
         doc_ref.set(diagnosis_data)
-        
         return doc_ref.id
     except Exception as e:
         print(f"Error inserting diagnosis: {e}")
@@ -97,14 +98,10 @@ def delete_diagnosis_by_id(diagnosis_id: str, user_id: str) -> bool:
     try:
         doc_ref = db.collection('diagnoses').document(diagnosis_id)
         doc = doc_ref.get()
-        
         if not doc.exists:
             return False
-        
-        # Kiểm tra ownership
         if doc.to_dict().get('userId') != user_id:
             return False
-        
         doc_ref.delete()
         return True
     except Exception as e:
@@ -116,10 +113,8 @@ def delete_all_diagnoses_of_user(user_id: str) -> bool:
     """Xóa toàn bộ chẩn đoán của user."""
     try:
         docs = db.collection('diagnoses').where('userId', '==', user_id).stream()
-        
         for doc in docs:
             doc.reference.delete()
-        
         return True
     except Exception as e:
         print(f"Error deleting all diagnoses: {e}")

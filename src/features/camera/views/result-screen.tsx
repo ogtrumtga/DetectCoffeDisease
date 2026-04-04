@@ -2,65 +2,69 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
-  ActivityIndicator,
-  SafeAreaView,
   ScrollView,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeArea } from "@/components/SafeArea";
 
 import { styles } from "../styles/result-screen-style";
 import { useResultScreenVM } from "../viewmodels/result-screenVM";
 
 export default function ResultScreen() {
   const {
-    isLoading,
-    mockDiagnosis,
+    diagnosis,
     handleViewMedicine,
     handleRediagnose,
     handleBackToCameraIndex,
   } = useResultScreenVM();
 
-  if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2A9D8F" />
-        <Text style={styles.loadingText}>Đang tải kết quả...</Text>
-      </View>
-    );
-  }
+  // Màu badge theo severity
+  const severityColor =
+    diagnosis.severity === "high"
+      ? "#FF5722"
+      : diagnosis.severity === "medium"
+      ? "#FF9800"
+      : "#4CAF50";
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeArea style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <TouchableOpacity
-            onPress={handleBackToCameraIndex}
-            style={styles.backButton}
-          >
+          <TouchableOpacity onPress={handleBackToCameraIndex} style={styles.backButton}>
             <Ionicons name="chevron-back" size={24} color="#ABE0AC" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>KẾT QUẢ CHUẨN ĐOÁN</Text>
+          <Text style={styles.headerTitle}>KẾT QUẢ CHẨN ĐOÁN</Text>
           <View style={{ width: 40 }} />
         </View>
 
         <View style={styles.resultCard}>
           <View style={styles.resultHeader}>
             <Text style={styles.resultTitle}>Chẩn đoán</Text>
-            {/* ĐÃ SỬA: Thay div bằng View */}
-            <View style={styles.confidenceBadge}>
-              <Text style={styles.confidenceText}>
-                {mockDiagnosis.confidence} chính xác
-              </Text>
+            <View style={[styles.confidenceBadge, { backgroundColor: severityColor }]}>
+              <Text style={styles.confidenceText}>{diagnosis.confidence} chính xác</Text>
             </View>
           </View>
 
-          <Text style={styles.diseaseName}>{mockDiagnosis.disease}</Text>
+          <Text style={[styles.diseaseName, { color: diagnosis.color }]}>
+            {diagnosis.disease}
+          </Text>
+
+          {/* Tóm tắt số lượng phát hiện */}
+          {Object.keys(diagnosis.summary).length > 0 && (
+            <View style={{ marginTop: 8, marginBottom: 4 }}>
+              {Object.entries(diagnosis.summary).map(([name, count]) => (
+                <Text key={name} style={{ color: "#555", fontSize: 13 }}>
+                  • {name}: {String(count)} vùng phát hiện
+                </Text>
+              ))}
+            </View>
+          )}
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Triệu chứng</Text>
-            <Text style={styles.sectionContent}>{mockDiagnosis.symptoms}</Text>
+            <Text style={styles.sectionTitle}>Mô tả</Text>
+            <Text style={styles.sectionContent}>{diagnosis.symptoms}</Text>
           </View>
         </View>
 
@@ -80,6 +84,6 @@ export default function ResultScreen() {
           <Text style={styles.rediagnoseButtonText}>Chẩn đoán lại</Text>
         </TouchableOpacity>
       </ScrollView>
-    </SafeAreaView>
+    </SafeArea>
   );
 }

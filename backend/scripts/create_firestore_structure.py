@@ -118,12 +118,12 @@ def main():
     # 5. COLLECTION: diagnoses
     # Lưu kết quả chẩn đoán chi tiết từ AI model
     # ========================================================================
-    print("\n📦 [5/8] Tạo collection: diagnoses")
+    print("\n📦 [5/9] Tạo collection: diagnoses")
     print("     Mục đích: Lưu kết quả chẩn đoán chi tiết từ AI model")
     diagnoses_sample = {
         'userId': '_structure_sample',  # FK → users
-        'diseaseKey': 'healthy',  # Key của bệnh (healthy/rust/cercospora/miner/phoma)
-        'diseaseName': 'Healthy (Khỏe mạnh)',  # Tên tiếng Anh
+        'diseaseKey': 'healthy',  # Key của bệnh (healthy/rust/miner/phoma)
+        'diseaseName': 'Healthy (Khỏe mạnh)',  # Tên bệnh
         'diseaseNameVi': 'Lá khỏe mạnh',  # Tên tiếng Việt
         'confidence': 0.95,  # Độ tin cậy (0-1)
         'description': 'Lá cà phê khỏe mạnh, không có dấu hiệu bệnh.',
@@ -138,34 +138,50 @@ def main():
     print("     Fields: userId, diseaseKey, diseaseName, diseaseNameVi, confidence,")
     print("             description, treatment, severity, imageUrl, modelVersion")
     print("     Relationship: userId → users")
-    print("     Supported diseases: healthy, rust, cercospora, miner, phoma")
+    print("     Supported diseases: healthy, rust, miner, phoma")
     
     # ========================================================================
-    # 6. COLLECTION: history
-    # Lưu lịch sử các lần chẩn đoán (metadata only)
+    # 6. COLLECTION: diseases
+    # Danh sách bệnh cà phê (lowercase keys)
     # ========================================================================
-    print("\n📦 [6/8] Tạo collection: history")
-    print("     Mục đích: Lưu lịch sử các lần chẩn đoán (metadata)")
-    history_sample = {
-        'userId': '_structure_sample',  # FK → users
-        'diagnosisId': '_structure_sample',  # FK → diagnoses
-        'imageId': 'img_001',  # ID ảnh trong Storage
-        'predictions': {  # Tóm tắt kết quả
-            'disease': 'healthy',
-            'confidence': 0.95
-        },
-        'createdAt': datetime.utcnow()
+    print("\n📦 [6/9] Tạo collection: diseases")
+    print("     Mục đích: Danh sách bệnh cà phê được model hỗ trợ")
+    diseases_sample = {
+        'name': 'Sample Disease',  # Lowercase key
+        'description': 'Sample disease description',  # Lowercase key
+        'id': 'sample_disease'  # Lowercase key
     }
-    create_collection_structure('history', '_structure_sample', history_sample)
-    print("     Fields: userId, diagnosisId, imageId, predictions, createdAt")
-    print("     Relationships: userId → users, diagnosisId → diagnoses")
-    print("     Purpose: Lightweight list, link to full diagnosis")
+    create_collection_structure('diseases', '_structure_sample', diseases_sample)
+    print("     Fields: name, description, id (lowercase keys)")
+    print("     Document ID: {diseaseKey}")
+    print("     Note: Không còn lưu treatment, severity, color ở đây")
     
     # ========================================================================
-    # 7. COLLECTION: notifications
+    # 7. COLLECTION: treatments
+    # Hướng điều trị (liên kết với diseases)
+    # ========================================================================
+    print("\n📦 [7/9] Tạo collection: treatments")
+    print("     Mục đích: Hướng điều trị cho từng bệnh")
+    treatments_sample = {
+        'diseaseId': 'sample_disease',  # FK → diseases
+        'steps': ['Step 1', 'Step 2'],  # Các bước điều trị
+        'medicine': ['Medicine 1', 'Medicine 2'],  # Danh sách thuốc
+        'severity': 'medium',  # none/medium/high
+        'color': '#FF9800',  # Màu hiển thị
+        'createdBy': '_structure_sample',  # FK → users
+        'createdAt': datetime.utcnow(),
+        'updatedAt': datetime.utcnow()
+    }
+    create_collection_structure('treatments', '_structure_sample', treatments_sample)
+    print("     Fields: diseaseId, steps[], medicine[], severity, color")
+    print("     Relationship: diseaseId → diseases/{diseaseId}")
+    print("     Note: Severity và color giờ lưu trong treatments")
+    
+    # ========================================================================
+    # 8. COLLECTION: notifications
     # Lưu thông báo cho người dùng
     # ========================================================================
-    print("\n📦 [7/8] Tạo collection: notifications")
+    print("\n📦 [8/9] Tạo collection: notifications")
     print("     Mục đích: Lưu thông báo cho người dùng")
     notifications_sample = {
         'userId': '_structure_sample',  # FK → users
@@ -182,10 +198,10 @@ def main():
     print("     Types: system, like, comment, diagnosis_alert")
     
     # ========================================================================
-    # 8. COLLECTION: weather_cache
+    # 9. COLLECTION: weather_cache
     # Cache dữ liệu thời tiết
     # ========================================================================
-    print("\n📦 [8/8] Tạo collection: weather_cache")
+    print("\n📦 [9/9] Tạo collection: weather_cache")
     print("     Mục đích: Cache dữ liệu thời tiết")
     weather_sample = {
         'locationKey': 'sample_location',
@@ -216,7 +232,8 @@ def main():
         ('comments', 'Bình luận bài đăng', 'postId, authorId, content'),
         ('likes', 'Lượt thích bài đăng', 'postId, userId'),
         ('diagnoses', 'Kết quả chẩn đoán chi tiết', 'userId, diseaseKey, diseaseName, confidence, imageUrl, treatment'),
-        ('history', 'Lịch sử chẩn đoán (metadata)', 'userId, diagnosisId, imageId, predictions'),
+        ('diseases', 'Danh sách bệnh cà phê', 'name, description, id'),
+        ('treatments', 'Hướng điều trị', 'diseaseId, steps[], medicine[], severity, color'),
         ('notifications', 'Thông báo người dùng', 'userId, type, title, message, isRead'),
         ('weather_cache', 'Cache dữ liệu thời tiết', 'locationKey, weatherData')
     ]
@@ -246,7 +263,7 @@ def main():
         ('comments', 'postId (ASC) + createdAt (ASC)', 'Query comments của bài đăng'),
         ('likes', 'postId (ASC) + userId (ASC)', 'Query likes của bài đăng'),
         ('diagnoses', 'userId (ASC) + createdAt (DESC)', 'Query kết quả chẩn đoán'),
-        ('history', 'userId (ASC) + createdAt (DESC)', 'Query lịch sử chẩn đoán'),
+        ('treatments', 'diseaseId (ASC)', 'Query treatments theo bệnh'),
         ('notifications', 'userId (ASC) + isRead (ASC) + createdAt (DESC)', 'Query thông báo chưa đọc')
     ]
     

@@ -39,10 +39,20 @@ pip install "pydantic[email]"
 ### Development mode
 
 ```bash
-uvicorn backend.main:app --reload
+# Chạy từ thư mục GỐC của project (không phải từ backend/)
+python -m uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Hoặc nếu đã cd vào backend/:
+
+```bash
+cd backend
+python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 Server sẽ chạy tại: http://localhost:8000
+
+Chi tiết xem: `START_SERVER.md`
 
 ## 📚 API Documentation
 
@@ -163,6 +173,26 @@ Chi tiết xem `DATABASE_SCHEMA.md`
 - **Batch queries**: Lấy nhiều users cùng lúc khi JOIN
 - **Indexes**: Composite indexes cho queries phức tạp
 
+## 🔥 Firestore Indexes
+
+### Deploy Indexes
+
+Khi gặp lỗi "The query requires an index", deploy indexes:
+
+```bash
+# Cách 1: Dùng script
+python scripts/deploy_firestore_indexes.py
+
+# Cách 2: Dùng Firebase CLI
+firebase deploy --only firestore:indexes
+```
+
+Chi tiết xem: `FIX_FIRESTORE_INDEX_ERROR.md`
+
+### Kiểm tra Index Status
+
+https://console.firebase.google.com/project/coffe-detect/firestore/indexes
+
 ## 🐛 Troubleshooting
 
 ### Lỗi: `No module named 'fastapi'`
@@ -178,6 +208,12 @@ pip install "pydantic[email]"
 ### Lỗi: `serviceAccountKey.json not found`
 - Tải file từ Firebase Console
 - Đặt vào `backend/serviceAccountKey.json`
+
+### Lỗi: `The query requires an index`
+```bash
+python scripts/deploy_firestore_indexes.py
+```
+Xem chi tiết: `FIX_FIRESTORE_INDEX_ERROR.md`
 
 ### Server không chạy được
 ```bash
