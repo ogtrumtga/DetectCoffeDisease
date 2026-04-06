@@ -9,10 +9,25 @@ export interface LocationData {
 
 export const locationService = {
   /**
+   * Check if location permission is granted
+   */
+  async checkPermission(): Promise<boolean> {
+    const { status } = await Location.getForegroundPermissionsAsync();
+    return status === 'granted';
+  },
+
+  /**
    * Request location permission and get current GPS coordinates
    */
   async getCurrentLocation(): Promise<{ latitude: number; longitude: number }> {
-    const { status } = await Location.requestForegroundPermissionsAsync();
+    // Check existing permission first
+    let { status } = await Location.getForegroundPermissionsAsync();
+    
+    // If not granted, request permission
+    if (status !== 'granted') {
+      const result = await Location.requestForegroundPermissionsAsync();
+      status = result.status;
+    }
     
     if (status !== 'granted') {
       throw new Error('GPS_PERMISSION_DENIED');
@@ -20,6 +35,7 @@ export const locationService = {
 
     const location = await Location.getCurrentPositionAsync({
       accuracy: Location.Accuracy.Balanced,
+      timeout: 10000, // 10 seconds timeout
     });
 
     return {

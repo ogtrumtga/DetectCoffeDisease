@@ -11,6 +11,8 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Linking,
+  Alert,
 } from "react-native";
 import {
   CurrentWeatherCard,
@@ -102,6 +104,8 @@ export function WeatherScreen() {
   }
 
   if (error && !data) {
+    const isPermissionError = error === 'PERMISSION_DENIED';
+    
     return (
       <View style={weatherStyles.container}>
         <View
@@ -116,9 +120,39 @@ export function WeatherScreen() {
           <Text style={weatherStyles.cityName}>Lỗi</Text>
         </View>
         <View style={weatherStyles.errorContainer}>
-          <Text style={weatherStyles.errorText}>{error}</Text>
-          <TouchableOpacity style={weatherStyles.retryButton} onPress={retry}>
-            <Text style={weatherStyles.retryButtonText}>Thử lại</Text>
+          <Ionicons 
+            name={isPermissionError ? "location-outline" : "alert-circle-outline"} 
+            size={64} 
+            color="#FF6B6B" 
+            style={{ marginBottom: 16 }}
+          />
+          <Text style={weatherStyles.errorText}>
+            {isPermissionError 
+              ? 'Cần quyền truy cập vị trí' 
+              : error}
+          </Text>
+          {isPermissionError && (
+            <Text style={[weatherStyles.errorText, { fontSize: 14, marginTop: 8, color: '#666' }]}>
+              Ứng dụng cần quyền truy cập vị trí để hiển thị thông tin thời tiết chính xác cho khu vực của bạn.
+            </Text>
+          )}
+          <TouchableOpacity 
+            style={[weatherStyles.retryButton, { marginTop: 20 }]} 
+            onPress={isPermissionError ? () => {
+              Alert.alert(
+                'Cấp quyền truy cập vị trí',
+                'Vui lòng vào Cài đặt > Ứng dụng > DediCafe > Quyền và bật quyền Vị trí',
+                [
+                  { text: 'Hủy', style: 'cancel' },
+                  { text: 'Mở Cài đặt', onPress: () => Linking.openSettings() },
+                  { text: 'Thử lại', onPress: retry }
+                ]
+              );
+            } : retry}
+          >
+            <Text style={weatherStyles.retryButtonText}>
+              {isPermissionError ? 'Cho phép' : 'Thử lại'}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>

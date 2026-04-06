@@ -22,19 +22,8 @@ export default function HomeScreen() {
         {/* WEATHER SECTION */}
         <View style={styles.weatherRow}>
           <TouchableOpacity
-            style={[
-              styles.weatherBadge,
-              !locationAllowed && { opacity: 0.7 }, // Subtly indicate disabled state if needed
-            ]}
-            onPress={() => {
-              if (locationAllowed) {
-                navigateWeather();
-              } else {
-                // Nếu chưa cho phép, có thể gọi handleAllowLocation
-                // hoặc không làm gì để chặn click
-                handleAllowLocation();
-              }
-            }}
+            style={styles.weatherBadge}
+            onPress={navigateWeather}
           >
             <View>
               <Text style={styles.weatherDate}>Hôm nay</Text>

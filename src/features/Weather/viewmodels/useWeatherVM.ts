@@ -81,9 +81,13 @@ export function useWeatherVM() {
       console.error('Weather fetch error:', err);
       
       if (err.message === 'GPS_PERMISSION_DENIED') {
-        setError('Vui lòng bật GPS để sử dụng tính năng này');
+        setError('PERMISSION_DENIED');
+      } else if (err.message === 'WEATHER_API_FAILED') {
+        setError('Không thể kết nối đến dịch vụ thời tiết. Vui lòng kiểm tra kết nối mạng.');
+      } else if (err.message === 'GEOCODING_FAILED') {
+        setError('Không thể xác định vị trí. Vui lòng thử lại.');
       } else {
-        setError('Không thể tải dữ liệu thời tiết. Vui lòng thử lại.');
+        setError('Đã xảy ra lỗi. Vui lòng thử lại sau.');
       }
     }
   };
