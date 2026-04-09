@@ -18,7 +18,7 @@ interface UsePostDetailVMProps {
 
 export const usePostDetailVM = ({ postId, initialPost }: UsePostDetailVMProps) => {
   // Authentication
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, user } = useAuth();
 
   // State management
   const [post, setPost] = useState<CommunityPost | null>(initialPost || null);
@@ -42,25 +42,8 @@ export const usePostDetailVM = ({ postId, initialPost }: UsePostDetailVMProps) =
 
   const loadPostDetails = async () => {
     try {
-      // Fallback: tạo mock post nếu không có data từ params
-      const mockPost: CommunityPost = {
-        id: postId,
-        title: 'Câu hỏi',
-        content: 'Mô tả bệnh',
-        image: 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=400&h=200&fit=crop',
-        author: {
-          id: 'user1',
-          name: 'Đăng Vinh',
-          avatar: 'https://via.placeholder.com/40'
-        },
-        createdAt: '2025-09-24T10:30:00Z',
-        updatedAt: '2025-09-24T10:30:00Z',
-        likes: 2,
-        comments: 2,
-        tags: [],
-        isLiked: false
-      };
-      setPost(mockPost);
+      const detail = await communityService.getPostDetail(postId);
+      setPost(detail);
     } catch (error) {
       console.error('Error loading post details:', error);
       Alert.alert('Lỗi', 'Không thể tải thông tin bài viết');
@@ -225,13 +208,24 @@ export const usePostDetailVM = ({ postId, initialPost }: UsePostDetailVMProps) =
         parentId
       });
 
+      // Đồng bộ avatar hiện tại để comment hiển thị đúng ngay sau khi đăng.
+      const normalizedComment: Comment = {
+        ...newComment,
+        author: {
+          ...newComment.author,
+          avatar:
+            newComment.author.avatar ||
+            (user?.photoURL ?? undefined),
+        },
+      };
+
       if (parentId) {
         // Đây là reply - cập nhật parent comment
         setComments(prev => prev.map(comment => {
           if (comment.id === parentId) {
             return {
               ...comment,
-              replies: [...(comment.replies || []), newComment],
+              replies: [...(comment.replies || []), normalizedComment],
               replyCount: (comment.replyCount || 0) + 1
             };
           }
@@ -250,7 +244,7 @@ export const usePostDetailVM = ({ postId, initialPost }: UsePostDetailVMProps) =
         );
       } else {
         // Đây là top-level comment
-        setComments(prev => [newComment, ...prev]);
+        setComments(prev => [normalizedComment, ...prev]);
 
         // Tạo thông báo comment
         const { notificationService } = await import('../services');
@@ -274,6 +268,7 @@ export const usePostDetailVM = ({ postId, initialPost }: UsePostDetailVMProps) =
       
       // Cập nhật trong service để sync với community screen
       communityService.updatePostCommentCount(postId, 1);
+      await loadComments(true);
       
       return updatedPost;
     } catch (error) {

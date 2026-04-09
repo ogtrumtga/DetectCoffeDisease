@@ -14,6 +14,7 @@ import {
   View,
 } from "react-native";
 import GoogleAuthWebView from "../../../components/GoogleAuthWebView";
+import { locationPermissionService } from "../../../services/locationPermissionService";
 import { authStyles as styles } from "../styles/auth.styles";
 import { useLogin } from "../viewmodels/useLogin";
 
@@ -49,7 +50,24 @@ export default function LoginScreen({ onLoginSuccess }: LoginViewProps) {
 
   const handleLogin = async () => {
     const success = await onLoginPress();
-    if (success) onLoginSuccess();
+    if (success) {
+      // Đăng nhập thành công → Chuyển màn hình trước
+      onLoginSuccess();
+      
+      // SAU ĐÓ mới hỏi GPS (khi đã vào màn hình chính)
+      setTimeout(() => {
+        requestLocationPermission();
+      }, 500);
+    }
+  };
+
+  const requestLocationPermission = async () => {
+    try {
+      const payload = await locationPermissionService.requestAndCachePermission();
+      console.log("[Login] GPS permission result:", payload.granted ? "granted" : "denied");
+    } catch (error) {
+      console.error('[Login] Error requesting GPS permission:', error);
+    }
   };
 
   return (
@@ -178,7 +196,13 @@ export default function LoginScreen({ onLoginSuccess }: LoginViewProps) {
         onSuccess={async (idToken, accessToken) => {
           const success = await handleGoogleSuccess(idToken, accessToken);
           if (success) {
+            // Đăng nhập Google thành công → Chuyển màn hình trước
             onLoginSuccess();
+            
+            // SAU ĐÓ mới hỏi GPS
+            setTimeout(() => {
+              requestLocationPermission();
+            }, 500);
           }
         }}
         onCancel={handleGoogleCancel}

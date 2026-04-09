@@ -5,7 +5,7 @@
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import React, { useEffect, useState } from 'react';
-import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { CommunityColors } from '../design-system';
 import { Comment } from '../models';
 import { notificationService } from '../services';
@@ -23,6 +23,9 @@ interface CommentItemProps {
 }
 
 export function CommentItem({ comment, onLike, onReply, isReply = false, highlightedCommentId = null, currentUserId, postId }: CommentItemProps) {
+  const avatarUri = (comment.author as any)?.avatar || (comment.author as any)?.avatarUrl || '';
+  const hasAvatar = typeof avatarUri === 'string' && avatarUri.trim().length > 0;
+
   const [timeAgo, setTimeAgo] = useState('');
   const [showMenu, setShowMenu] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
@@ -123,11 +126,15 @@ export function CommentItem({ comment, onLike, onReply, isReply = false, highlig
           commentStyles.commentAvatar,
           isReply && commentStyles.replyAvatar
         ]}>
-          <IconSymbol 
-            name="person.fill" 
-            size={isReply ? 14 : 20} 
-            color={CommunityColors.captionText}
-          />
+          {hasAvatar ? (
+            <Image source={{ uri: avatarUri }} style={commentStyles.commentAvatarImage} />
+          ) : (
+            <IconSymbol 
+              name="person.fill" 
+              size={isReply ? 14 : 20} 
+              color={CommunityColors.captionText}
+            />
+          )}
         </View>
 
         {/* Comment content */}
@@ -152,11 +159,13 @@ export function CommentItem({ comment, onLike, onReply, isReply = false, highlig
                 style={commentStyles.commentActionButton}
                 onPress={handleLike}
               >
-                <IconSymbol 
-                  name={comment.isLiked ? "hand.thumbsup.fill" : "hand.thumbsup"} 
-                  size={16} 
-                  color={comment.isLiked ? CommunityColors.likeButton : CommunityColors.captionText}
-                />
+                <View style={commentStyles.commentActionIcon}>
+                  <IconSymbol 
+                    name={comment.isLiked ? "hand.thumbsup.fill" : "hand.thumbsup"} 
+                    size={16} 
+                    color={comment.isLiked ? CommunityColors.likeButton : CommunityColors.captionText}
+                  />
+                </View>
                 {(comment.likes || 0) > 0 && (
                   <Text style={commentStyles.commentActionText}>
                     {comment.likes}
@@ -170,11 +179,13 @@ export function CommentItem({ comment, onLike, onReply, isReply = false, highlig
                 style={commentStyles.commentActionButton}
                 onPress={handleReply}
               >
-                <IconSymbol 
-                  name="bubble.left" 
-                  size={16} 
-                  color={CommunityColors.captionText}
-                />
+                <View style={commentStyles.commentActionIcon}>
+                  <IconSymbol 
+                    name="bubble.left" 
+                    size={16} 
+                    color={CommunityColors.captionText}
+                  />
+                </View>
                 {(comment.replyCount || 0) > 0 && (
                   <Text style={commentStyles.commentActionText}>
                     {comment.replyCount}

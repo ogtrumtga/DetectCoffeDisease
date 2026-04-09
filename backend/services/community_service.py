@@ -180,9 +180,11 @@ def toggle_post_like_service(post_id: str, user_id: str) -> Dict[str, Any]:
     🔗 MỐI QUAN HỆ:
     - Tạo/xóa document trong collection 'likes'
     - Cập nhật likesCount trong collection 'posts' (denormalized)
+    - Tạo notification cho tác giả bài đăng (nếu like)
     """
     # Đảm bảo bài đăng tồn tại trước khi like/unlike.
-    if not post_repo.get_post_by_id(post_id):
+    post = post_repo.get_post_by_id(post_id)
+    if not post:
         return {
             'success': False,
             'message': 'Post not found'
@@ -204,6 +206,30 @@ def toggle_post_like_service(post_id: str, user_id: str) -> Dict[str, Any]:
         # Like
         like_repo.add_like(post_id, user_id)
         post_repo.increment_likes_count(post_id, 1)
+        
+        # Tạo notification cho tác giả bài đăng (nếu không phải tự like)
+        author_id = post.get('authorId')
+        if author_id and author_id != user_id:
+            from backend.services import notification_service
+            
+            # Lấy thông tin user đang like
+            liker = user_repo.get_user_by_id(user_id)
+            liker_name = liker.get('displayName', 'Someone') if liker else 'Someone'
+            
+            notification_service.create_notification_service(
+                user_id=author_id,
+                notif_type='like',
+                title='Bài viết được thích',
+                message=f'{liker_name} đã thích bài viết của bạn',
+                data={
+                    'postId': post_id,
+                    'postTitle': post.get('title', ''),
+                    'likerId': user_id,
+                    'likerName': liker_name,
+                    'likerAvatar': liker.get('photoURL', '') if liker else ''
+                }
+            )
+        
         return {
             'success': True,
             'action': 'liked',
@@ -218,9 +244,11 @@ def add_comment_to_post_service(post_id: str, user_id: str, content: str) -> Dic
     🔗 MỐI QUAN HỆ:
     - Tạo document trong collection 'comments'
     - Cập nhật commentsCount trong collection 'posts' (denormalized)
+    - Tạo notification cho tác giả bài đăng
     """
     # Đảm bảo bài đăng tồn tại trước khi tạo comment.
-    if not post_repo.get_post_by_id(post_id):
+    post = post_repo.get_post_by_id(post_id)
+    if not post:
         return {
             'success': False,
             'message': 'Post not found'
@@ -237,6 +265,33 @@ def add_comment_to_post_service(post_id: str, user_id: str, content: str) -> Dic
     
     # Tăng comments count
     post_repo.increment_comments_count(post_id, 1)
+    
+    # Tạo notification cho tác giả bài đăng (nếu không phải tự comment)
+    author_id = post.get('authorId')
+    if author_id and author_id != user_id:
+        from backend.services import notification_service
+        
+        # Lấy thông tin user đang comment
+        commenter = user_repo.get_user_by_id(user_id)
+        commenter_name = commenter.get('displayName', 'Someone') if commenter else 'Someone'
+        
+        # Truncate content cho notification
+        preview = content[:50] + '...' if len(content) > 50 else content
+        
+        notification_service.create_notification_service(
+            user_id=author_id,
+            notif_type='comment',
+            title='Bình luận mới',
+            message=f'{commenter_name} đã bình luận: "{preview}"',
+            data={
+                'postId': post_id,
+                'postTitle': post.get('title', ''),
+                'commentId': comment_id,
+                'commenterId': user_id,
+                'commenterName': commenter_name,
+                'commenterAvatar': commenter.get('photoURL', '') if commenter else ''
+            }
+        )
     
     return {
         'success': True,

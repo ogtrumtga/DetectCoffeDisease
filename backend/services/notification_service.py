@@ -10,16 +10,59 @@ from typing import Dict, Any, List
 def list_notifications_service(user_id: str, page: int = 1, limit: int = 50) -> Dict[str, Any]:
     """
     Service: GET /api/notifications
-    Lấy danh sách thông báo của user.
+    Lấy danh sách thông báo của user với đầy đủ thông tin.
     """
     offset = (page - 1) * limit
     notifications = notif_repo.query_notifications_by_user(user_id, limit=limit, offset=offset)
     
+    # Format notifications để trả về đầy đủ thông tin user
+    formatted_notifications = []
+    for notif in notifications:
+        # Extract user info từ data field
+        data = notif.get('data', {})
+        
+        # Xác định user info dựa vào type
+        user_info = {
+            'id': '',
+            'name': 'Unknown',
+            'avatar': ''
+        }
+        
+        if notif.get('type') == 'like':
+            user_info = {
+                'id': data.get('likerId', ''),
+                'name': data.get('likerName', 'Unknown'),
+                'avatar': data.get('likerAvatar', '')
+            }
+        elif notif.get('type') in ['comment', 'reply']:
+            user_info = {
+                'id': data.get('commenterId', ''),
+                'name': data.get('commenterName', 'Unknown'),
+                'avatar': data.get('commenterAvatar', '')
+            }
+        
+        formatted_notifications.append({
+            'id': notif.get('id'),
+            'type': notif.get('type'),
+            'title': notif.get('title'),
+            'message': notif.get('message'),
+            'user': user_info,
+            'postId': data.get('postId'),
+            'commentId': data.get('commentId'),
+            'createdAt': notif.get('createdAt').isoformat() if notif.get('createdAt') else None,
+            'isRead': notif.get('isRead', False),
+            'data': data
+        })
+    
     return {
         'success': True,
-        'data': notifications,
-        'page': page,
-        'limit': limit
+        'data': formatted_notifications,
+        'pagination': {
+            'page': page,
+            'limit': limit,
+            'total': len(notifications),
+            'totalPages': 1
+        }
     }
 
 

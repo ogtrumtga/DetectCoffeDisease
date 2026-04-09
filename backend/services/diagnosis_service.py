@@ -217,7 +217,7 @@ def predict_disease_by_image_id_service(
     user_id: str,
     image_id: str,
     img_size: int = 640,
-    conf_threshold: float = 0.001,  # Giảm xuống 0.001 để detect dễ hơn
+    conf_threshold: float = 0.05,  # Tăng từ 0.001 lên 0.05 để lọc noise
 ) -> Dict[str, Any]:
     """
     Chạy YOLO (best.pt) trên ảnh đã upload, lưu kết quả vào collection diagnoses.
@@ -268,8 +268,33 @@ def predict_disease_by_image_id_service(
         if response.status_code != 200:
             return {'success': False, 'message': f'Cannot download image (status={response.status_code})'}
 
-        processed_image = _preprocess_image_for_model(response.content, img_size=img_size)
-        prediction_result = _run_yolo_prediction(processed_image, img_size=img_size, conf_threshold=conf_threshold)
+        # Chạy 2 pipeline tiền xử lý và chọn kết quả tốt hơn để tăng độ ổn định:
+        # - balanced: tăng khả năng làm rõ vùng bệnh
+        # - natural: giữ màu/texture gần ảnh gốc
+        processed_balanced = _preprocess_image_for_model(response.content, img_size=img_size)
+        result_balanced = _run_yolo_prediction(
+            processed_balanced,
+            img_size=img_size,
+            conf_threshold=conf_threshold
+        )
+
+        processed_natural = _preprocess_image_natural(response.content, img_size=img_size)
+        result_natural = _run_yolo_prediction(
+            processed_natural,
+            img_size=img_size,
+            conf_threshold=max(0.03, conf_threshold - 0.01)
+        )
+
+        def _score_prediction(result: Dict[str, Any]) -> float:
+            detections_count = len(result.get("detections", []))
+            confidence = float(result.get("primaryConfidence", 0.0))
+            return detections_count * 0.1 + confidence
+
+        score_balanced = _score_prediction(result_balanced)
+        score_natural = _score_prediction(result_natural)
+        prediction_result = result_balanced if score_balanced >= score_natural else result_natural
+        print(f"[Predict] Selected pipeline: {'balanced' if prediction_result is result_balanced else 'natural'}")
+        print(f"[Predict] Scores -> balanced={round(score_balanced, 4)}, natural={round(score_natural, 4)}")
 
         # Kiểm tra xem có phải lá cà phê không
         is_valid = prediction_result.get('isValidCoffeeLeaf', True)
@@ -293,26 +318,20 @@ def predict_disease_by_image_id_service(
                 'message': '❌ Không phát hiện lá cà phê trong ảnh.\n\n📸 Vui lòng chụp lại với:\n• Ảnh lá cà phê rõ nét\n• Ánh sáng đầy đủ\n• Lá chiếm 70-80% khung hình'
             }
         
-        # Case 2: Confidence quá thấp (<20%) → Ảnh không rõ hoặc không phải lá cà phê
-        if primary_confidence < 0.20:
-            print(f"[Validation] REJECTED: Low confidence ({round(primary_confidence * 100, 1)}%)")
-            return {
-                'success': False,
-                'message': '❌ Không phải lá cà phê hoặc ảnh không rõ\n\n� Hướng dẫn chụp đúng:p\n• Chụp ảnh LÁ CÀ PHÊ thật\n• Ánh sáng tự nhiên, không quá tối/sáng\n• Lá lấp đầy khung hình\n• Camera focus rõ nét'
-            }
+        # Case 2: Confidence thấp → chỉ cảnh báo, không reject cứng
+        if primary_confidence < 0.08:
+            print(f"[Validation] WARNING: Very low confidence ({round(primary_confidence * 100, 1)}%)")
         
         # Case 3: Detect quá ít objects (<2) và confidence thấp (20-40%) → Nghi ngờ
+        # Case 3: Detect quá ít objects (<2) và confidence thấp (15-40%) → Nghi ngờ
         if total_detections < 2 and primary_confidence < 0.40:
-            print(f"[Validation] REJECTED: Few detections ({total_detections}) with medium confidence ({round(primary_confidence * 100, 1)}%)")
-            return {
-                'success': False,
-                'message': '⚠️ Phát hiện không rõ ràng\n\n Để cải thiện:\n• Chụp nhiều lá cà phê hơn trong 1 ảnh\n• Tăng ánh sáng\n• Đảm bảo lá không bị mờ/nhòe\n• Giữ camera ổn định khi chụp'
-            }
+            print(f"[Validation] WARNING: Few detections ({total_detections}) with medium confidence ({round(primary_confidence * 100, 1)}%)")
+            # Không reject nữa, chỉ warning
         
         # Case 4: OK - Tiếp tục xử lý
         print(f"[Validation] PASSED: {total_detections} detections, {round(primary_confidence * 100, 1)}% confidence")
         
-        if not is_valid and primary_disease_raw in ['not_coffee_leaf', 'unknown']:
+        if not is_valid and primary_disease_raw in ['not_coffee_leaf', 'unknown'] and total_detections == 0:
             print(f"[Validation] REJECTED: Invalid coffee leaf flag")
             return {
                 'success': False,
@@ -595,50 +614,92 @@ def _load_yolo_model():
 
 def _preprocess_image_for_model(image_bytes: bytes, img_size: int = 640) -> Image.Image:
     """
-    Tiền xử lý ảnh ULTRA OPTIMIZED - Tối ưu tối đa cho confidence cao.
-    
-    Chiến lược AGGRESSIVE:
-    1. Tight crop - Chỉ giữ vùng lá chính (bỏ background)
-    2. Strong CLAHE - Tăng contrast mạnh
-    3. Aggressive color boost - Làm nổi bật vết bệnh tối đa
-    4. Strong sharpening - Làm rõ viền vết bệnh
-    5. High contrast - Tăng độ tương phản cao
+    Tiền xử lý cân bằng để giữ đặc trưng thật của lá.
+    Tránh các bước quá mạnh gây sai lệch texture/màu.
     """
     try:
         from PIL import ImageEnhance
         import numpy as np
         import cv2
         
-        print(f"[Preprocess] Starting MINIMAL preprocessing...")
+        print(f"[Preprocess] Starting balanced preprocessing...")
         
         # Load ảnh
         image = Image.open(BytesIO(image_bytes)).convert('RGB')
         original_size = image.size
         print(f"[Preprocess] Original: {original_size}")
         
-        # MINIMAL preprocessing - Chỉ resize và enhance nhẹ
-        # Không crop, không CLAHE phức tạp
+        # Convert to numpy for advanced processing
+        img_array = np.array(image)
         
-        # STEP 1: Resize trước để xử lý nhanh hơn
-        image = image.resize((img_size, img_size), Image.Resampling.LANCZOS)
-        print(f"[Preprocess] Resized to: {img_size}x{img_size}")
+        # STEP 1: Đánh giá độ mờ để adaptive sharpen
+        blur_score = _estimate_blur_variance(img_array)
+        print(f"[Preprocess] Blur score: {round(blur_score, 2)}")
+
+        # STEP 2: Denoise nhẹ
+        print(f"[Preprocess] Applying light denoise...")
+        img_array = cv2.fastNlMeansDenoisingColored(img_array, None, 5, 5, 7, 15)
         
-        # STEP 2: Tăng sharpness nhẹ
+        # STEP 3: Unsharp theo mức mờ (ảnh càng mờ thì sharpen cao hơn một chút)
+        sharpen_strength = 1.18 if blur_score >= 120 else 1.28
+        blur_subtract = -0.18 if blur_score >= 120 else -0.28
+        print(f"[Preprocess] Applying adaptive unsharp mask...")
+        gaussian = cv2.GaussianBlur(img_array, (0, 0), 1.2)
+        img_array = cv2.addWeighted(img_array, sharpen_strength, gaussian, blur_subtract, 0)
+        
+        # Convert back to PIL
+        image = Image.fromarray(img_array)
+        
+        # STEP 4: Smart crop mức vừa phải
+        image = _optimized_smart_crop(image)
+
+        # STEP 5: Resize with letterbox (không ép méo tỉ lệ ảnh)
+        image = _resize_with_letterbox(image, img_size=img_size)
+        print(f"[Preprocess] Resized with letterbox to: {img_size}x{img_size}")
+        
+        # STEP 6: Convert to numpy
+        img_array = np.array(image)
+        
+        # STEP 7: Adaptive Brightness
+        brightness = _calculate_brightness(image)
+        print(f"[Preprocess] Brightness: {round(brightness)}")
+        
+        if brightness < 95:
+            print(f"[Preprocess] Image dark, applying gamma correction")
+            img_array = _adaptive_gamma_correction(img_array)
+        elif brightness > 180:
+            print(f"[Preprocess] Image bright, applying gamma correction")
+            img_array = _adaptive_gamma_correction(img_array)
+        
+        # STEP 8: CLAHE cân bằng
+        print(f"[Preprocess] Applying balanced CLAHE...")
+        img_array = _balanced_clahe(img_array)
+        
+        # STEP 9: Tăng màu nhẹ vùng bệnh
+        print(f"[Preprocess] Applying moderate disease color boost...")
+        img_array = _moderate_color_boost(img_array)
+        
+        # STEP 10: Làm sắc nét nhẹ
+        print(f"[Preprocess] Applying light edge enhancement...")
+        img_array = _enhance_edges(img_array)
+        
+        # STEP 11: Convert back to PIL
+        image = Image.fromarray(img_array)
+        
+        # STEP 12: Final sharpening nhẹ
+        print(f"[Preprocess] Applying final sharpening...")
         enhancer = ImageEnhance.Sharpness(image)
-        image = enhancer.enhance(1.3)
-        print(f"[Preprocess] Sharpness enhanced")
+        image = enhancer.enhance(1.15 if blur_score >= 120 else 1.25)
         
-        # STEP 3: Tăng contrast nhẹ
+        # STEP 10: Final contrast nhẹ
         enhancer = ImageEnhance.Contrast(image)
-        image = enhancer.enhance(1.2)
-        print(f"[Preprocess] Contrast enhanced")
+        image = enhancer.enhance(1.08)
         
-        # STEP 4: Tăng color nhẹ
+        # STEP 11: Final color nhẹ
         enhancer = ImageEnhance.Color(image)
-        image = enhancer.enhance(1.2)
-        print(f"[Preprocess] Color enhanced")
+        image = enhancer.enhance(1.08)
         
-        print(f"[Preprocess] ✅ MINIMAL preprocessing completed")
+        print(f"[Preprocess] ✅ Balanced preprocessing completed")
         
         return image
         
@@ -650,18 +711,55 @@ def _preprocess_image_for_model(image_bytes: bytes, img_size: int = 640) -> Imag
             
             # Standard enhancement
             enhancer = ImageEnhance.Sharpness(image)
-            image = enhancer.enhance(1.5)
+            image = enhancer.enhance(2.0)
             
             enhancer = ImageEnhance.Color(image)
-            image = enhancer.enhance(1.3)
+            image = enhancer.enhance(1.4)
             
             enhancer = ImageEnhance.Contrast(image)
-            image = enhancer.enhance(1.2)
+            image = enhancer.enhance(1.3)
             
             return image.resize((img_size, img_size), Image.Resampling.LANCZOS)
         except:
             image = Image.open(BytesIO(image_bytes)).convert('RGB')
             return image.resize((img_size, img_size), Image.Resampling.LANCZOS)
+
+
+def _preprocess_image_natural(image_bytes: bytes, img_size: int = 640) -> Image.Image:
+    """
+    Pipeline nhẹ để giữ đặc trưng tự nhiên của ảnh.
+    Dùng như nhánh fallback khi pipeline balanced làm giảm độ nhận diện.
+    """
+    try:
+        from PIL import ImageEnhance
+        import numpy as np
+        import cv2
+
+        image = Image.open(BytesIO(image_bytes)).convert("RGB")
+        image = _optimized_smart_crop(image)
+        image = _resize_with_letterbox(image, img_size=img_size)
+
+        img_array = np.array(image)
+        brightness = _calculate_brightness(image)
+
+        if brightness < 90 or brightness > 185:
+            img_array = _adaptive_gamma_correction(img_array)
+
+        # CLAHE và sharpen rất nhẹ để tránh phá texture gốc
+        img_array = _gentle_clahe(img_array)
+        image = Image.fromarray(img_array)
+
+        enhancer = ImageEnhance.Sharpness(image)
+        image = enhancer.enhance(1.08)
+        enhancer = ImageEnhance.Contrast(image)
+        image = enhancer.enhance(1.05)
+        enhancer = ImageEnhance.Color(image)
+        image = enhancer.enhance(1.04)
+
+        return image
+    except Exception as e:
+        print(f"[PreprocessNatural] Failed: {e}, fallback to balanced pipeline")
+        return _preprocess_image_for_model(image_bytes, img_size=img_size)
 
 
 def _aggressive_smart_crop(image: Image.Image) -> Image.Image:
@@ -864,19 +962,19 @@ def _optimized_smart_crop(image: Image.Image) -> Image.Image:
             largest = max(contours, key=cv2.contourArea)
             x, y, w, h = cv2.boundingRect(largest)
             
-            # GENEROUS padding - 25% để giữ nhiều context
-            margin_x = int(w * 0.25)
-            margin_y = int(h * 0.25)
+            # Padding lớn hơn để tránh crop quá sát khi user chụp gần
+            margin_x = int(w * 0.35)
+            margin_y = int(h * 0.35)
             
             x = max(0, x - margin_x)
             y = max(0, y - margin_y)
             w = min(width - x, w + 2 * margin_x)
             h = min(height - y, h + 2 * margin_y)
             
-            # Validate crop size - Chấp nhận crop từ 20% trở lên
+            # Validate crop size - Chấp nhận crop từ 30% trở lên để giữ ngữ cảnh
             crop_ratio = (w * h) / (width * height)
             
-            if crop_ratio >= 0.20:
+            if crop_ratio >= 0.30:
                 cropped = image.crop((x, y, x + w, y + h))
                 print(f"[Crop] ✅ Smart crop: {width}x{height} → {w}x{h} ({round(crop_ratio*100)}% retained)")
                 return cropped
@@ -885,19 +983,44 @@ def _optimized_smart_crop(image: Image.Image) -> Image.Image:
         else:
             print(f"[Crop] ⚠️ No leaf detected, using center crop")
         
-        # Fallback: Center crop 92% - Giữ hầu hết ảnh, bỏ viền
-        margin = 0.04
+        # Fallback: Center crop 96% - hạn chế over-crop
+        margin = 0.02
         x = int(width * margin)
         y = int(height * margin)
         w = int(width * (1 - 2 * margin))
         h = int(height * (1 - 2 * margin))
         
-        print(f"[Crop] Center crop 92%: {width}x{height} → {w}x{h}")
+        print(f"[Crop] Center crop 96%: {width}x{height} → {w}x{h}")
         return image.crop((x, y, x + w, y + h))
         
     except Exception as e:
         print(f"[Crop] ERROR: {e}, returning original")
         return image
+
+
+def _resize_with_letterbox(image: Image.Image, img_size: int = 640) -> Image.Image:
+    """
+    Resize giữ nguyên tỉ lệ, sau đó pad ra ảnh vuông để tránh méo hình.
+    Cách này thường ổn định hơn ép trực tiếp (w,h) -> (img_size,img_size).
+    """
+    try:
+        w, h = image.size
+        if w <= 0 or h <= 0:
+            return image.resize((img_size, img_size), Image.Resampling.LANCZOS)
+
+        scale = min(img_size / w, img_size / h)
+        new_w = max(1, int(round(w * scale)))
+        new_h = max(1, int(round(h * scale)))
+
+        resized = image.resize((new_w, new_h), Image.Resampling.LANCZOS)
+        canvas = Image.new("RGB", (img_size, img_size), (0, 0, 0))
+        paste_x = (img_size - new_w) // 2
+        paste_y = (img_size - new_h) // 2
+        canvas.paste(resized, (paste_x, paste_y))
+        return canvas
+    except Exception as e:
+        print(f"[Resize] Letterbox failed: {e}, fallback to direct resize")
+        return image.resize((img_size, img_size), Image.Resampling.LANCZOS)
 
 
 def _balanced_clahe(img_array: np.ndarray) -> np.ndarray:
@@ -1082,6 +1205,111 @@ def _calculate_brightness(image: Image.Image) -> float:
         return sum(stat.mean) / 3
     except:
         return 128
+
+
+def _estimate_blur_variance(img_array: np.ndarray) -> float:
+    """
+    Ước lượng độ mờ bằng variance của Laplacian.
+    Giá trị thấp hơn nghĩa là ảnh mờ hơn.
+    """
+    try:
+        import cv2
+
+        gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+        return float(cv2.Laplacian(gray, cv2.CV_64F).var())
+    except Exception:
+        return 150.0
+
+
+def _strong_clahe_v2(img_array: np.ndarray) -> np.ndarray:
+    """
+    Strong CLAHE V2 - CLAHE mạnh hơn cho ảnh mờ.
+    """
+    try:
+        import cv2
+        
+        # Convert to LAB
+        lab = cv2.cvtColor(img_array, cv2.COLOR_RGB2LAB)
+        l, a, b = cv2.split(lab)
+        
+        # STRONG CLAHE với clip limit cao (4.0)
+        clahe = cv2.createCLAHE(clipLimit=4.0, tileGridSize=(8, 8))
+        l = clahe.apply(l)
+        
+        # Tăng A, B channels mạnh hơn
+        a = np.clip(a * 1.12, 0, 255).astype(np.uint8)
+        b = np.clip(b * 1.12, 0, 255).astype(np.uint8)
+        
+        # Merge back
+        lab = cv2.merge([l, a, b])
+        rgb = cv2.cvtColor(lab, cv2.COLOR_LAB2RGB)
+        
+        return rgb
+    except Exception as e:
+        print(f"[CLAHE] Failed: {e}")
+        return img_array
+
+
+def _aggressive_color_boost(img_array: np.ndarray) -> np.ndarray:
+    """
+    Aggressive Color Boost - Tăng màu vùng bệnh TỐI ĐA.
+    """
+    try:
+        import cv2
+        
+        # Convert to HSV
+        hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
+        h, s, v = cv2.split(hsv)
+        
+        # Tăng saturation MẠNH ở vùng màu bệnh
+        # Hue 0-45: Red/Brown/Yellow (tất cả bệnh)
+        disease_mask = ((h >= 0) & (h <= 45)) | ((h >= 160) & (h <= 180))
+        
+        # Tăng saturation MẠNH (35%)
+        s = np.where(disease_mask, np.minimum(s * 1.35, 255), s).astype(np.uint8)
+        
+        # Tăng value để làm sáng vùng bệnh (20%)
+        v = np.where(disease_mask, np.minimum(v * 1.20, 255), v).astype(np.uint8)
+        
+        # Merge back
+        hsv = cv2.merge([h, s, v])
+        rgb = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
+        
+        return rgb
+    except Exception as e:
+        print(f"[ColorBoost] Failed: {e}")
+        return img_array
+
+
+def _enhance_edges_advanced(img_array: np.ndarray) -> np.ndarray:
+    """
+    Advanced Edge Enhancement - Làm nổi bật viền vết bệnh mạnh mẽ.
+    """
+    try:
+        import cv2
+        
+        # Convert to grayscale
+        gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+        
+        # Sobel edge detection (X + Y)
+        sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
+        sobely = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
+        sobel = np.sqrt(sobelx**2 + sobely**2)
+        sobel = np.uint8(np.clip(sobel, 0, 255))
+        
+        # Normalize
+        sobel = cv2.normalize(sobel, None, 0, 255, cv2.NORM_MINMAX)
+        
+        # Convert to 3 channels
+        sobel_3ch = cv2.cvtColor(sobel, cv2.COLOR_GRAY2RGB)
+        
+        # Blend with original (stronger blend)
+        enhanced = cv2.addWeighted(img_array, 1.0, sobel_3ch, 0.4, 0)
+        
+        return enhanced
+    except Exception as e:
+        print(f"[EdgeEnhance] Failed: {e}")
+        return img_array
 
 
 def _enhance_disease_regions(img_array: np.ndarray) -> np.ndarray:
@@ -1299,7 +1527,7 @@ def _contrast_stretching(img_array: np.ndarray) -> np.ndarray:
         return img_array
 
 
-def _run_yolo_prediction(image: Image.Image, img_size: int = 640, conf_threshold: float = 0.001) -> Dict[str, Any]:
+def _run_yolo_prediction(image: Image.Image, img_size: int = 640, conf_threshold: float = 0.05) -> Dict[str, Any]:
     import time
     started = time.time()
     
@@ -1316,14 +1544,14 @@ def _run_yolo_prediction(image: Image.Image, img_size: int = 640, conf_threshold
     results = model.predict(
         source=image, 
         imgsz=img_size, 
-        conf=conf_threshold,  # Threshold rất thấp
+        conf=conf_threshold,  # Threshold thấp để detect nhiều hơn
         verbose=False,
         device='cpu',
         half=False,
-        max_det=300,  # Tăng lên 300
-        augment=True,  # Augmentation
+        max_det=300,  # Tăng lên 300 detections
+        augment=True,  # Test-time augmentation
         agnostic_nms=False,
-        iou=0.3,  # Giảm IoU xuống 0.3 để giữ nhiều detections hơn
+        iou=0.35,  # IoU threshold - Giảm để giữ nhiều overlapping boxes
     )
     
     predict_time = round(time.time() - predict_start, 2)
@@ -1358,7 +1586,7 @@ def _run_yolo_prediction(image: Image.Image, img_size: int = 640, conf_threshold
         print(f"[YOLO] ⚠️ Model không detect được gì - Có thể:")
         print(f"[YOLO]   1. Ảnh không phải lá cà phê")
         print(f"[YOLO]   2. Ảnh quá mờ/tối/sáng")
-        print(f"[YOLO]   3. Model chưa được train với loại ảnh này")
+        print(f"[YOLO]   3. Lá quá nhỏ trong khung hình")
         return {
             'summary': summary, 
             'detections': detections, 
@@ -1374,15 +1602,24 @@ def _run_yolo_prediction(image: Image.Image, img_size: int = 640, conf_threshold
     disease_confidence_sum: Dict[str, float] = {}
     disease_count: Dict[str, int] = {}
     disease_max_conf: Dict[str, float] = {}
+    disease_area_sum: Dict[str, float] = {}  # Tổng diện tích vùng bệnh
     
     for idx in range(len(boxes)):
         class_id = int(boxes.cls[idx].item())
         confidence = float(boxes.conf[idx].item())
         bbox = [int(x) for x in boxes.xyxy[idx].tolist()]
         disease_name = str(names.get(class_id, str(class_id))).strip()
+        
+        # Tính diện tích bbox
+        area = (bbox[2] - bbox[0]) * (bbox[3] - bbox[1])
 
         summary[disease_name] = summary.get(disease_name, 0) + 1
-        detections.append({'disease': disease_name, 'confidence': round(confidence, 4), 'bbox': bbox})
+        detections.append({
+            'disease': disease_name, 
+            'confidence': round(confidence, 4), 
+            'bbox': bbox,
+            'area': area
+        })
         
         all_confidences.append(confidence)
         
@@ -1390,20 +1627,26 @@ def _run_yolo_prediction(image: Image.Image, img_size: int = 640, conf_threshold
         disease_confidence_sum[disease_name] = disease_confidence_sum.get(disease_name, 0.0) + confidence
         disease_count[disease_name] = disease_count.get(disease_name, 0) + 1
         disease_max_conf[disease_name] = max(disease_max_conf.get(disease_name, 0.0), confidence)
+        disease_area_sum[disease_name] = disease_area_sum.get(disease_name, 0.0) + area
     
-    # Chọn primary disease - Weighted scoring
+    # Chọn primary disease - Weighted scoring V2
     if disease_confidence_sum:
-        # Score = (avg_confidence * 0.6) + (max_confidence * 0.3) + (count_weight * 0.1)
+        # Score = (avg_confidence * 0.5) + (max_confidence * 0.25) + (count_weight * 0.15) + (area_weight * 0.10)
         disease_scores = {}
         max_count = max(disease_count.values())
+        max_area = max(disease_area_sum.values())
         
         for disease in disease_confidence_sum:
             avg_conf = disease_confidence_sum[disease] / disease_count[disease]
             max_conf = disease_max_conf[disease]
             count_weight = disease_count[disease] / max_count
+            area_weight = disease_area_sum[disease] / max_area
             
-            score = (avg_conf * 0.6) + (max_conf * 0.3) + (count_weight * 0.1)
+            # Weighted score - Ưu tiên confidence và area
+            score = (avg_conf * 0.5) + (max_conf * 0.25) + (count_weight * 0.15) + (area_weight * 0.10)
             disease_scores[disease] = score
+            
+            print(f"[YOLO] {disease}: avg={round(avg_conf*100,1)}%, max={round(max_conf*100,1)}%, count={disease_count[disease]}, area={round(area_weight*100)}%, score={round(score,3)}")
         
         primary_disease = max(disease_scores, key=disease_scores.get)
         # Primary confidence = average confidence của bệnh đó
@@ -1411,13 +1654,16 @@ def _run_yolo_prediction(image: Image.Image, img_size: int = 640, conf_threshold
         
         overall_confidence = sum(all_confidences) / len(all_confidences) if all_confidences else 0.0
         
-        print(f"[YOLO] Primary: {primary_disease} (avg: {round(primary_confidence * 100, 1)}%, max: {round(disease_max_conf[primary_disease] * 100, 1)}%, count: {disease_count[primary_disease]})")
-        print(f"[YOLO] Overall confidence: {round(overall_confidence * 100, 1)}%")
+        print(f"[YOLO] ✅ Primary: {primary_disease}")
+        print(f"[YOLO]    - Avg confidence: {round(primary_confidence * 100, 1)}%")
+        print(f"[YOLO]    - Max confidence: {round(disease_max_conf[primary_disease] * 100, 1)}%")
+        print(f"[YOLO]    - Count: {disease_count[primary_disease]}")
+        print(f"[YOLO]    - Overall: {round(overall_confidence * 100, 1)}%")
     
-    is_valid = primary_confidence >= 0.001  # Giảm xuống 0.001
+    is_valid = primary_confidence >= 0.001  # Threshold rất thấp
     
     if not is_valid:
-        print(f"[YOLO] Confidence too low ({round(primary_confidence * 100, 1)}%)")
+        print(f"[YOLO] ⚠️ Confidence too low ({round(primary_confidence * 100, 1)}%)")
     
     print(f"[YOLO] Summary: {summary}")
     print(f"[YOLO] Total processing time: {processing_time}s")

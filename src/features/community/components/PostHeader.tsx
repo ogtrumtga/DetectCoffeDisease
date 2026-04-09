@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { View, Text } from 'react-native';
+import { Image, View, Text } from 'react-native';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { User } from '../models';
 import { postStyles } from '../styles';
@@ -60,11 +60,18 @@ export function PostHeader({ author, createdAt, isDetailView = false }: PostHead
         postStyles.avatar,
         isDetailView && postStyles.avatarSmall
       ]}>
-        <IconSymbol 
-          name="person.fill" 
-          size={isDetailView ? 14 : 20} 
-          color="#9CA3AF"
-        />
+        {author.avatar ? (
+          <Image
+            source={{ uri: author.avatar }}
+            style={{ width: '100%', height: '100%', borderRadius: 999 }}
+          />
+        ) : (
+          <IconSymbol 
+            name="person.fill" 
+            size={isDetailView ? 14 : 20} 
+            color="#9CA3AF"
+          />
+        )}
       </View>
       
       <View style={postStyles.authorInfo}>

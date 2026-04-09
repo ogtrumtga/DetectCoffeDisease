@@ -119,17 +119,18 @@ export const useRegister = () => {
       const userDoc = await getDoc(userRef);
       
       if (!userDoc.exists()) {
-        // User mới - tạo profile trong Firestore
+        // User mới - tạo profile trong Firestore với photoURL từ Google
         await setDoc(userRef, {
           email: userCredential.user.email,
           displayName: userCredential.user.displayName || '',
-          photoURL: userCredential.user.photoURL || '',
+          photoURL: userCredential.user.photoURL || '', // Chỉ set khi tạo mới
           bio: '',
           createdAt: new Date(),
           updatedAt: new Date()
         });
         console.log('[useRegister] Created new user profile in Firestore');
       }
+      // ✅ Nếu user đã tồn tại, KHÔNG cập nhật photoURL để giữ nguyên avatar đã thay đổi
       
       await showCrossPlatformAlert("Thành công", "Đăng ký Google thành công!");
       

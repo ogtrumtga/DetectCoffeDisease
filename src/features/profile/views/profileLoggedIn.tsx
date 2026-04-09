@@ -14,10 +14,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Swipeable from "react-native-gesture-handler/Swipeable";
 
 import { styles } from "../styles/profileLoggedIn-style";
-import {
-  globalUserData,
-  useProfileLoggedInVM,
-} from "../viewmodels/profileLoggedInVM";
+import { useProfileLoggedInVM } from "../viewmodels/profileLoggedInVM";
 
 export default function ProfileHomeScreen() {
   const {
@@ -26,6 +23,7 @@ export default function ProfileHomeScreen() {
     isDeleting,
     historyData,
     activityData,
+    userData,
     deleteItem,
     toggleLikePost,
     navigateToDetail,
@@ -86,9 +84,9 @@ export default function ProfileHomeScreen() {
       <View style={styles.postContent}>
         <View style={styles.postHeader}>
           <View style={styles.smallAvatar}>
-            {globalUserData.avatar ? (
+            {userData.avatar ? (
               <Image
-                source={{ uri: globalUserData.avatar }}
+                source={{ uri: userData.avatar }}
                 style={{ width: "100%", height: "100%", borderRadius: 16 }}
                 resizeMode="cover"
               />
@@ -135,9 +133,9 @@ export default function ProfileHomeScreen() {
 
         <View style={styles.profileSection}>
           <View style={styles.avatarPlaceholder}>
-            {globalUserData.avatar ? (
+            {userData.avatar ? (
               <Image
-                source={{ uri: globalUserData.avatar }}
+                source={{ uri: userData.avatar }}
                 style={{ width: "100%", height: "100%", borderRadius: 37.5 }}
                 resizeMode="cover"
               />
@@ -146,8 +144,8 @@ export default function ProfileHomeScreen() {
             )}
           </View>
           <View style={styles.profileTextContainer}>
-            <Text style={styles.userName}>{globalUserData.name}</Text>
-            <Text style={styles.userBio}>{globalUserData.bio}</Text>
+            <Text style={styles.userName}>{userData.name}</Text>
+            <Text style={styles.userBio}>{userData.bio}</Text>
             <TouchableOpacity
               style={styles.vatoButton}
               onPress={navigateToEditProfile}

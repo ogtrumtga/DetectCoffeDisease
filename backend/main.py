@@ -3,6 +3,17 @@ FastAPI Backend for Coffee Disease Detection App.
 
 Main entry point for the API server.
 """
+import sys
+from pathlib import Path
+
+# Add parent directory to Python path to support both:
+# - Running from project root: python -m backend.main
+# - Running from backend dir: python main.py
+backend_dir = Path(__file__).parent
+project_root = backend_dir.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
@@ -89,4 +100,37 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    import socket
+    
+    # Lấy IP WiFi thật
+    def get_local_ip():
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
+            s.close()
+            return ip
+        except:
+            return "localhost"
+    
+    local_ip = get_local_ip()
+    
+    print("=" * 60)
+    print("🚀 Starting Coffee Disease Detection Backend")
+    print("=" * 60)
+    print(f"📍 Local:   http://localhost:8000")
+    print(f"📍 Network: http://{local_ip}:8000")
+    print(f"📚 Docs:    http://localhost:8000/docs")
+    print("=" * 60)
+    print(f"💡 Cập nhật IP trong .env của app:")
+    print(f"   EXPO_PUBLIC_API_BASE_URL=http://{local_ip}:8000")
+    print("=" * 60)
+    print("🛑 Press CTRL+C to quit")
+    print("=" * 60)
+    uvicorn.run(
+        "backend.main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True,
+        log_level="info"
+    )

@@ -103,8 +103,8 @@ export const useConfirmScreenVM = () => {
       console.log("[confirm-screenVM] Starting prediction for imageID:", imageID);
 
       // Gửi token trong body thay vì header để tránh CORS preflight
-      // Tăng imgSize lên 640 để model detect tốt hơn (thay vì 416)
-      // Giảm confThreshold xuống 0.10 để detect dễ hơn (thay vì 0.15)
+      // Dùng imgSize lớn hơn để giữ chi tiết tổn thương nhỏ.
+      // Hạ confThreshold để tăng recall (ít bỏ sót vết bệnh hơn).
       const predictRes = await fetchWithTimeout(API_ENDPOINTS.DIAGNOSIS_PREDICT, {
         method: "POST",
         headers: {
@@ -112,8 +112,8 @@ export const useConfirmScreenVM = () => {
         },
         body: JSON.stringify({ 
           imageId: imageID, 
-          imgSize: 640,  // Tăng từ 416 → 640 để chi tiết hơn
-          confThreshold: 0.10,  // Giảm từ 0.15 → 0.10 để detect dễ hơn
+          imgSize: 768,
+          confThreshold: 0.05,
           token: token || undefined,
         }),
         timeout: 120000, // 120 giây cho YOLO prediction

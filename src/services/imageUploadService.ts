@@ -29,7 +29,7 @@ export async function uploadImageToFirebase(
 
     // Tạo reference trong Firebase Storage
     const timestamp = Date.now();
-    const filename = `diagnosis/${userId}/${timestamp}.jpg`;
+    const filename = `avatars/${userId}/${timestamp}.jpg`;
     const storageRef = ref(storage, filename);
 
     console.log('[imageUploadService] Uploading to:', filename);

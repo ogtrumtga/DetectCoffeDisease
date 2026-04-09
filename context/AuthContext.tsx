@@ -4,6 +4,7 @@ import { auth, db } from "../config/firebase";
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
   limit,
   query,
@@ -16,6 +17,7 @@ interface AuthContextType {
   isLoggedIn: boolean;
   isLoading: boolean;
   logout: () => Promise<void>;
+  refreshUserProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -29,33 +31,50 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Hàm refresh user profile từ Firestore
+  const refreshUserProfile = async () => {
+    if (!auth.currentUser) return;
+    
+    try {
+      // Force reload Firebase User để trigger re-render
+      await auth.currentUser.reload();
+      setUser({ ...auth.currentUser });
+    } catch (e) {
+      console.error("[AuthContext] refreshUserProfile failed:", e);
+    }
+  };
+
   useEffect(() => {
     // Firebase tự động theo dõi trạng thái đăng nhập
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      // Luôn set firebaseUser trước để giữ nguyên Firebase User methods
       setUser(firebaseUser);
       setIsLoading(false);
 
       // Đảm bảo có document profile trong Firestore
-      // (Không cần tạo collection/doc thủ công)
+      // CHỈ tạo document NÊU CHƯA TỒN TẠI (không ghi đè photoURL đã cập nhật)
       if (firebaseUser) {
-        const name =
-          firebaseUser.displayName ||
-          (firebaseUser.email ? firebaseUser.email.split("@")[0] : "User");
+        const userRef = doc(db, "users", firebaseUser.uid);
+        const userDoc = await getDoc(userRef);
 
-        setDoc(
-          doc(db, "users", firebaseUser.uid),
-          {
-            uid: firebaseUser.uid,
+        // Chỉ tạo document mới nếu chưa tồn tại
+        if (!userDoc.exists()) {
+          const displayName =
+            firebaseUser.displayName ||
+            (firebaseUser.email ? firebaseUser.email.split("@")[0] : "User");
+
+          setDoc(userRef, {
             email: firebaseUser.email || null,
-            name,
-            avatarUrl: null,
-            bio: null,
+            displayName: displayName,
+            photoURL: firebaseUser.photoURL || '',
+            bio: '',
             createdAt: serverTimestamp(),
-          },
-          { merge: true }
-        ).catch((e) => {
-          console.error("[AuthContext] Failed to ensure user profile:", e);
-        });
+            updatedAt: serverTimestamp(),
+          }).catch((e) => {
+            console.error("[AuthContext] Failed to create user profile:", e);
+          });
+        }
+        // Nếu document đã tồn tại, KHÔNG làm gì cả để giữ nguyên photoURL đã cập nhật
 
         // Seed 1 record history mẫu khi lần đầu đăng nhập
         // để dữ liệu xuất hiện trên Firebase ngay (phục vụ demo đồ án).
@@ -97,7 +116,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <AuthContext.Provider
-      value={{ user, isLoggedIn: !!user, isLoading, logout }}
+      value={{ user, isLoggedIn: !!user, isLoading, logout, refreshUserProfile }}
     >
       {children}
     </AuthContext.Provider>

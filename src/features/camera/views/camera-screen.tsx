@@ -16,12 +16,14 @@ export default function CameraScreen() {
     permission,
     photo,
     isPreview,
+    cropMode,
     cameraRef,
     requestPermission,
     takePicture,
     pickImage,
     retakePicture,
     confirmPicture,
+    setCropMode,
     toggleFacing,
   } = useCameraScreenVM();
 
@@ -87,9 +89,57 @@ export default function CameraScreen() {
             </View>
           </>
         ) : (
-          <Image source={{ uri: photo! }} style={styles.camera} />
+          <View style={{ flex: 1 }}>
+            <Image source={{ uri: photo! }} style={styles.camera} />
+            <View style={styles.previewOverlay}>
+              <View
+                style={[
+                  styles.previewFocusFrame,
+                  cropMode === "full"
+                    ? styles.focusFrameFull
+                    : styles.focusFrameFocus,
+                ]}
+              />
+              <Text style={styles.previewHintText}>
+                {cropMode === "full"
+                  ? "Toàn ảnh: giữ đầy đủ ngữ cảnh lá"
+                  : "Tập trung lá/bệnh: giảm nhiễu nền xung quanh"}
+              </Text>
+            </View>
+          </View>
         )}
       </View>
+
+      {isPreview && (
+        <View style={styles.cropModeContainer}>
+          <TouchableOpacity
+            style={[styles.cropChip, cropMode === "full" && styles.cropChipActive]}
+            onPress={() => setCropMode("full")}
+          >
+            <Text
+              style={[
+                styles.cropChipText,
+                cropMode === "full" && styles.cropChipTextActive,
+              ]}
+            >
+              Toàn ảnh
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.cropChip, cropMode === "focus" && styles.cropChipActive]}
+            onPress={() => setCropMode("focus")}
+          >
+            <Text
+              style={[
+                styles.cropChipText,
+                cropMode === "focus" && styles.cropChipTextActive,
+              ]}
+            >
+              Cận lá/vùng bệnh
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Controls với Dynamic Padding Bottom để không bị Home Bar che */}
       <View style={[styles.controls, { paddingBottom: insets.bottom + 20 }]}>

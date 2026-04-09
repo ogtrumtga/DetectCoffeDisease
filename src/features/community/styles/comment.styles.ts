@@ -52,6 +52,11 @@ export const commentStyles = StyleSheet.create({
     alignItems: 'center',
     marginRight: Margins.md,
   },
+  commentAvatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 999,
+  },
 
   replyAvatar: {
     width: ComponentSizes.avatar.sm,
@@ -99,6 +104,9 @@ export const commentStyles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     paddingVertical: 4,
+  },
+  commentActionIcon: {
+    marginRight: 2,
   },
 
   commentActionText: {

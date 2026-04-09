@@ -1,0 +1,73 @@
+rules_version = '2';
+
+// Firebase Storage Rules
+// Cho phép user upload avatar và ảnh chẩn đoán
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper function: Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function: Check if file size is valid (max 5MB)
+    function isValidSize() {
+      return request.resource.size < 5 * 1024 * 1024;
+    }
+    
+    // Helper function: Check if file is an image
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+    
+    // ========================================================================
+    // PATH: avatars/{userId}/{filename}
+    // Lưu ảnh avatar của user
+    // ========================================================================
+    match /avatars/{userId}/{filename} {
+      // Ai cũng có thể đọc avatar (public)
+      allow read: if true;
+      
+      // Chỉ chủ sở hữu mới có thể upload/update/delete avatar của mình
+      allow write: if isAuthenticated() 
+                   && request.auth.uid == userId
+                   && isImage()
+                   && isValidSize();
+    }
+    
+    // ========================================================================
+    // PATH: diagnosis/{userId}/{filename}
+    // Lưu ảnh lá cà phê để chẩn đoán
+    // ========================================================================
+    match /diagnosis/{userId}/{filename} {
+      // Chỉ chủ sở hữu mới có thể đọc ảnh chẩn đoán của mình
+      allow read: if isAuthenticated() 
+                  && request.auth.uid == userId;
+      
+      // Chỉ chủ sở hữu mới có thể upload ảnh chẩn đoán
+      allow write: if isAuthenticated() 
+                   && request.auth.uid == userId
+                   && isImage()
+                   && isValidSize();
+    }
+    
+    // ========================================================================
+    // PATH: posts/{postId}/{filename}
+    // Lưu ảnh đính kèm bài đăng cộng đồng
+    // ========================================================================
+    match /posts/{postId}/{filename} {
+      // Ai cũng có thể đọc ảnh bài đăng (public)
+      allow read: if true;
+      
+      // User đã đăng nhập có thể upload ảnh cho bài đăng
+      allow write: if isAuthenticated()
+                   && isImage()
+                   && isValidSize();
+    }
+    
+    // Chặn tất cả các path khác
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

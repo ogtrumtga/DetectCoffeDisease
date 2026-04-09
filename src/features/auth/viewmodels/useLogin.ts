@@ -28,17 +28,7 @@ export const useLogin = () => {
     setEmailHint("");
   };
 
-  const showCrossPlatformAlert = (title: string, message: string) => {
-    if (Platform.OS === "web") {
-      window.alert(`${title}\n${message}`);
-      return Promise.resolve(true);
-    }
-    return new Promise<boolean>((resolve) => {
-      Alert.alert(title, message, [
-        { text: "OK", onPress: () => resolve(true) },
-      ]);
-    });
-  };
+  // Removed showCrossPlatformAlert - không cần nữa vì đã tắt alert
 
   const onLoginPress = async (): Promise<boolean> => {
     if (loading) return false;
@@ -51,10 +41,13 @@ export const useLogin = () => {
     try {
       setLoading(true);
       await signInWithEmailAndPassword(auth, email.trim(), password);
-      await showCrossPlatformAlert(
-        AUTH_MESSAGES.loginSuccess.title,
-        AUTH_MESSAGES.loginSuccess.body
-      );
+      
+      // ✅ Không hiện alert nữa - Để UX mượt hơn
+      // await showCrossPlatformAlert(
+      //   AUTH_MESSAGES.loginSuccess.title,
+      //   AUTH_MESSAGES.loginSuccess.body
+      // );
+      
       return true;
     } catch (error: any) {
       const msg =
@@ -95,19 +88,21 @@ export const useLogin = () => {
       const userDoc = await getDoc(userRef);
 
       if (!userDoc.exists()) {
-        // User mới - tạo profile trong Firestore
+        // User mới - tạo profile trong Firestore với photoURL từ Google
         await setDoc(userRef, {
           email: userCredential.user.email,
           displayName: userCredential.user.displayName || '',
-          photoURL: userCredential.user.photoURL || '',
+          photoURL: userCredential.user.photoURL || '', // Chỉ set khi tạo mới
           bio: '',
           createdAt: new Date(),
           updatedAt: new Date()
         });
         console.log('[useLogin] Created new user profile in Firestore');
       }
+      // ✅ Nếu user đã tồn tại, KHÔNG cập nhật photoURL để giữ nguyên avatar đã thay đổi
 
-      await showCrossPlatformAlert("Thành công", "Đăng nhập Google thành công!");
+      // ✅ Không hiện alert nữa - Để UX mượt hơn
+      // await showCrossPlatformAlert("Thành công", "Đăng nhập Google thành công!");
 
       // Trả về true để loginView biết đăng nhập thành công
       return true;
